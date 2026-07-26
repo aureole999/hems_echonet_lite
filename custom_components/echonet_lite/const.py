@@ -79,19 +79,9 @@ CLASS_CODE_CONTROLLER = 0x05FF
 # Common (super class, 0x80-0x9F) EPCs.
 EPC_OPERATION_STATUS = 0x80
 EPC_INSTALLATION_LOCATION = 0x81
-EPC_MANUFACTURER_FAULT_CODE = 0x86
-EPC_CURRENT_LIMIT = 0x87
-EPC_FAULT_STATUS = 0x88
-EPC_FAULT_DESCRIPTION = 0x89
 EPC_MANUFACTURER_CODE = 0x8A
 EPC_PRODUCT_CODE = 0x8C
 EPC_SERIAL_NUMBER = 0x8D
-EPC_POWER_SAVING_OPERATION = 0x8F
-EPC_REMOTE_CONTROL_SETTING = 0x93
-EPC_CURRENT_TIME = 0x97
-EPC_CURRENT_DATE = 0x98
-EPC_POWER_LIMIT = 0x99
-EPC_CUMULATIVE_OPERATING_TIME = 0x9A
 EPC_INF_PROPERTY_MAP = 0x9D
 EPC_SET_PROPERTY_MAP = 0x9E
 EPC_GET_PROPERTY_MAP = 0x9F
@@ -426,24 +416,329 @@ def infer_device_classes(
 # - CONFIG: writable settings (thresholds, schedules, reservations, ...)
 # - None: primary user-facing entities (e.g. temperature, power reading)
 #
-# Only the standardized common EPCs (0x80-0x9F) are classified here via the
-# explicit ``ENTITY_CATEGORY_BY_EPC`` map. Device-specific EPCs (0xA0-0xEF)
-# are intentionally left uncategorized because their meaning varies per
-# device class and keyword-based inference is too error-prone.
-
-# EPC -> EntityCategory for the standardized common EPCs (0x80-0x9F).
-ENTITY_CATEGORY_BY_EPC: dict[int, EntityCategory] = {
-    # DIAGNOSTIC: fault / identification
-    EPC_MANUFACTURER_FAULT_CODE: EntityCategory.DIAGNOSTIC,
-    EPC_FAULT_STATUS: EntityCategory.DIAGNOSTIC,
-    EPC_FAULT_DESCRIPTION: EntityCategory.DIAGNOSTIC,
-    EPC_CUMULATIVE_OPERATING_TIME: EntityCategory.DIAGNOSTIC,
-    # CONFIG: installation / settings
-    EPC_INSTALLATION_LOCATION: EntityCategory.CONFIG,
-    EPC_CURRENT_LIMIT: EntityCategory.CONFIG,
-    EPC_POWER_SAVING_OPERATION: EntityCategory.CONFIG,
-    EPC_REMOTE_CONTROL_SETTING: EntityCategory.CONFIG,
-    EPC_CURRENT_TIME: EntityCategory.CONFIG,
-    EPC_CURRENT_DATE: EntityCategory.CONFIG,
-    EPC_POWER_LIMIT: EntityCategory.CONFIG,
+# ``None`` applies to common (super class) EPCs. Class-specific entries take
+# precedence. Keep EPCs as MRA literals with their property names so additions
+# can be reviewed directly against the specification.
+ENTITY_CATEGORY_EPCS: dict[EntityCategory, dict[int | None, frozenset[int]]] = {
+    EntityCategory.DIAGNOSTIC: {
+        None: frozenset(
+            {
+                0x88,  # Fault status
+                0x89,  # Fault description
+            }
+        ),
+        0x0023: frozenset(  # Current sensor
+            {
+                0xE1,  # Rated voltage to be measured
+            }
+        ),
+        0x0135: frozenset(  # Air cleaner
+            {
+                0xE1,  # Filter change notice
+            }
+        ),
+        0x0260: frozenset(  # Electrically operated blind/shade
+            {
+                0xE8,  # Remote operation setting status
+            }
+        ),
+        0x0263: frozenset(  # Electrically operated rain sliding door/shutter
+            {
+                0xE8,  # Remote operation setting status
+            }
+        ),
+        0x026B: frozenset(  # Electric water heater
+            {
+                0xDB,  # Rated power consumption of H/P unit in wintertime
+                0xDC,  # Rated power consumption of H/P unit in in-between seasons
+                0xDD,  # Rated power consumption of H/P unit in summertime
+                0xE2,  # Tank capacity
+            }
+        ),
+        0x026F: frozenset(  # Electric lock
+            {
+                0xE7,  # Battery level
+            }
+        ),
+        0x0279: frozenset(  # Household solar power generation
+            {
+                0xB2,  # Function to control the type of surplus electricity purchase
+                0xB3,  # Output power change time setting value
+                0xB4,  # Upper limit clip setting value
+                0xC0,  # Operation power factor setting value
+                0xC2,  # Self-consumption type
+                0xC3,  # Capacity approved by equipment
+                0xC4,  # Conversion coefficient
+                0xD0,  # System-interconnected type
+            }
+        ),
+        0x027A: frozenset(  # Cold or hot water heat source equipment
+            {
+                0xEA,  # Power consumption measurement method
+            }
+        ),
+        0x027B: frozenset(  # Floor heater
+            {
+                0xE9,  # Rated power consumption
+                0xEA,  # Power consumption measurement method
+            }
+        ),
+        0x027C: frozenset(  # Fuel cell
+            {
+                0xC2,  # Rated power generation output
+                0xD0,  # System interconnected type
+                0xE2,  # Tank capacity
+            }
+        ),
+        0x027D: frozenset(  # Storage battery
+            {
+                0xA0,  # AC effective capacity (charging)
+                0xA1,  # AC effective capacity (discharging)
+                0xA2,  # AC chargeable capacity
+                0xA3,  # AC dischargeable capacity
+                0xC7,  # AC rated electric energy
+                0xD0,  # Rated electric energy
+                0xD1,  # Rated capacity
+                0xD2,  # Rated voltage
+                0xE6,  # Battery type
+                0xEF,  # Rated voltage (Independent)
+            }
+        ),
+        0x027E: frozenset(  # EV charger and discharger
+            {
+                0xC5,  # Rated charge capacity
+                0xC6,  # Rated discharge capacity
+                0xCC,  # Charger/Discharger type
+                0xD2,  # Rated voltage
+                0xE5,  # Maintenance status
+                0xEF,  # Rated voltage (Independent)
+            }
+        ),
+        0x0281: frozenset(  # Water flowmeter
+            {
+                0xE3,  # Detection of abnormal value in metering data
+            }
+        ),
+        0x0287: frozenset(  # Power distribution board metering
+            {
+                0xB0,  # Master rated capacity
+            }
+        ),
+        0x0288: frozenset(  # Low-voltage smart electric energy meter
+            {
+                0xD7,  # Number of effective digits for cumulative amounts of electric energy
+            }
+        ),
+        0x028A: frozenset(  # High-voltage smart electric energy meter
+            {
+                0xC4,  # Number of effective digits of electric power demand
+                0xCC,  # Number of effective digits for measurement data of cumulative amount of reactive electric power consumption (lag) for power factor measurement
+                0xE5,  # Number of effective digits for cumulative amount of active electric energy
+            }
+        ),
+        0x028D: frozenset(  # Smart electric energy meter for sub-metering
+            {
+                0xD7,  # Number of effective digits for cumulative amounts of electric energy
+            }
+        ),
+        0x028E: frozenset(  # distributed generator's electric energy meter
+            {
+                0xD2,  # Tolerance class
+            }
+        ),
+        0x028F: frozenset(  # Bidirectional high voltage smart electric energy meter
+            {
+                0xC4,  # Number of effective digits of electric power demand
+                0xCC,  # Number of effective digits for cumulative amount of reactive electric energy
+                0xE5,  # Number of effective digits for cumulative amount of active electric energy
+            }
+        ),
+        0x02A1: frozenset(  # EV Charger
+            {
+                0xC5,  # Rated charge capacity
+                0xCC,  # Charger type
+                0xD2,  # Rated voltage
+            }
+        ),
+        0x02A6: frozenset(  # Hybrid water heater
+            {
+                0xE2,  # Tank capacity
+            }
+        ),
+        0x02A7: frozenset(  # Frequency regulation
+            {
+                0xD3,  # Value of contract power
+            }
+        ),
+        0x03B7: frozenset(  # Refrigerator
+            {
+                0xDC,  # Rated power consumption
+            }
+        ),
+        0x03CE: frozenset(  # Commercial showcase
+            {
+                0xD0,  # This property indicates the type of the showcase.
+                0xD1,  # This property indicates the type of the showcase door.
+                0xD2,  # This property indicates refrigerator type, such as built-in or separate.
+                0xD3,  # This property indicates the shape of the showcase.
+                0xD4,  # This property indicates the purpose of the showcase, either refrigeration or freezing.
+                0xE4,  # Indicates rated power consumption necessary when showcase is cooling.
+                0xE5,  # Indicates rated power consumption when heater is operating during showcase defrosting.
+                0xE6,  # Indicates rated power consumption when showcase is operating fan motor.
+                0xEB,  # Indicates type of lighting installed inside the showcase.
+                0xEC,  # Indicates type of lighting installed outside the showcase.
+            }
+        ),
+        0x05FF: frozenset(  # Controller
+            {
+                0xCD,  # Fault status of device to be controlled
+            }
+        ),
+    },
+    EntityCategory.CONFIG: {
+        None: frozenset(
+            {
+                0x81,  # Installation location
+                0x87,  # Current limit setting
+                0x90,  # ON timer-based reservation setting
+                0x93,  # Remote control setting
+                0x94,  # OFF timer-based reservation setting
+                0x97,  # Current time setting
+                0x98,  # Current date setting
+                0x99,  # Power limit setting
+            }
+        ),
+        0x0002: frozenset(  # Crime prevention sensor
+            {
+                0xB0,  # Detection threshold level
+                0xBF,  # Invasion occurrence status resetting
+            }
+        ),
+        0x0003: frozenset(  # Emergency button
+            {
+                0xBF,  # Emergency occurrence status resetting
+            }
+        ),
+        0x0007: frozenset(  # Human detection sensor
+            {
+                0xB0,  # Detection threshold level
+            }
+        ),
+        0x0016: frozenset(  # Bath heating status sensor
+            {
+                0xB0,  # Detection threshold level
+            }
+        ),
+        0x001D: frozenset(  # VOC sensor
+            {
+                0xB0,  # Detection threshold level
+            }
+        ),
+        0x026B: frozenset(  # Electric water heater
+            {
+                0xD6,  # Volume setting
+                0xD7,  # Mute setting
+            }
+        ),
+        0x0272: frozenset(  # Instantaneous water heater
+            {
+                0xD6,  # Volume setting
+                0xD7,  # Mute setting
+            }
+        ),
+        0x0279: frozenset(  # Household solar power generation
+            {
+                0xA0,  # Output power control setting 1
+                0xA1,  # Output power control setting 2
+                0xA2,  # Function to control purchase surplus electricity setting
+                0xC1,  # FIT contract type
+                0xE2,  # Resetting cumulative amount of electric energy generated
+                0xE4,  # Resetting cumulative amount of electric energy sold
+                0xE5,  # Power generation output limit setting 1
+                0xE6,  # Power generation output limit setting 2
+                0xE7,  # Limit setting for the amount of electricity sold
+                0xE8,  # Rated power generation output (System-interconnected)
+                0xE9,  # Rated power generation output (Independent)
+            }
+        ),
+        0x027C: frozenset(  # Fuel cell
+            {
+                0xC6,  # Cumulative energy generation output reset setting
+                0xC9,  # Cumulative gas consumption reset setting
+                0xCE,  # In-house cumulative energy consumption reset
+            }
+        ),
+        0x027D: frozenset(  # Storage battery
+            {
+                0xAA,  # AC charge amount setting value
+                0xAB,  # AC discharge amount setting value
+                0xC1,  # Charging method
+                0xC2,  # Discharging method
+                0xCC,  # Re-interconnection permission setting
+                0xCD,  # Operation permission setting
+                0xCE,  # Independent operation permission setting
+                0xD7,  # Measured cumulative discharging electric energy reset setting
+                0xD9,  # Measured cumulative charging electric energy reset setting
+                0xE0,  # Charging/discharging amount setting 1
+                0xE1,  # Charging/discharging amount setting 2
+                0xE7,  # Charging amount setting 1
+                0xE8,  # Discharging amount setting 1
+                0xE9,  # Charging amount setting 2
+                0xEA,  # Discharging amount setting 2
+                0xEB,  # Charging electric energy setting
+                0xEC,  # Discharging electric energy setting
+                0xED,  # Charging current setting
+                0xEE,  # Discharging current setting
+            }
+        ),
+        0x027E: frozenset(  # EV charger and discharger
+            {
+                0xD7,  # Cumulative amount of discharging electric energy reset setting
+                0xD9,  # Cumulative amount of charging electric energy reset setting
+                0xDC,  # Charging method
+                0xDD,  # Discharging method
+                0xDE,  # Purchasing electric power setting
+                0xDF,  # Re-interconnection permission setting
+                0xE0,  # Charging/Discharging electric power setting
+                0xE7,  # Charging amount setting 1
+                0xE9,  # Charging amount setting 2
+                0xEA,  # Discharging electric energy setting
+                0xEB,  # Charging electric energy setting
+                0xEC,  # Discharging electric energy setting
+                0xED,  # Charging current setting
+                0xEE,  # Discharging current setting
+            }
+        ),
+        0x0281: frozenset(  # Water flowmeter
+            {
+                0xD0,  # Water flowmeter classification
+                0xD1,  # Owner classification
+            }
+        ),
+        0x02A1: frozenset(  # EV Charger
+            {
+                0xD9,  # Cumulative amount of charging electric energy reset setting
+                0xE7,  # Charging amount setting
+                0xEB,  # Charging electric energy setting
+                0xED,  # Charging current setting
+            }
+        ),
+        0x02A7: frozenset(  # Frequency regulation
+            {
+                0xC7,  # Correction value for reference frequency
+                0xCC,  # Instantaneous power measurement value history storage setting
+            }
+        ),
+    },
 }
+
+
+def get_entity_category(class_code: int, epc: int) -> EntityCategory | None:
+    """Return the explicit category for a class/EPC pair, if any."""
+    for category, epcs_by_class in ENTITY_CATEGORY_EPCS.items():
+        if epc in epcs_by_class.get(class_code, frozenset()):
+            return category
+    for category, epcs_by_class in ENTITY_CATEGORY_EPCS.items():
+        if epc in epcs_by_class.get(None, frozenset()):
+            return category
+    return None
