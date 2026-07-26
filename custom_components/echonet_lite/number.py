@@ -46,7 +46,9 @@ class EchonetLiteNumberEntityDescription(
     @classmethod
     @override
     def build_from_entity_def(
-        cls, entity_def: EntityDefinition
+        cls,
+        class_code: int,
+        entity_def: EntityDefinition,
     ) -> EchonetLiteNumberEntityDescription:
         """Construct a number description from an EntityDefinition."""
         return cls(
@@ -67,7 +69,7 @@ class EchonetLiteNumberEntityDescription(
             if entity_def.multiple_of != 1.0
             else None,
             prop=NumericProp.from_entity_def(entity_def),
-            **cls._common_kwargs(entity_def),
+            **cls._common_kwargs(class_code, entity_def),
         )
 
 
