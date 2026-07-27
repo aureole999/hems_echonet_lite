@@ -470,6 +470,9 @@ ENTITY_CATEGORY_EPCS: dict[EntityCategory, dict[int | None, frozenset[int]]] = {
                 0xC3,  # Capacity approved by equipment
                 0xC4,  # Conversion coefficient
                 0xD0,  # System-interconnected type
+                0xF2,  # Input voltage 1-4 (manufacturer-specific)
+                0xF3,  # Input current 1-4 (manufacturer-specific)
+                0xF4,  # Input power 1-4 (manufacturer-specific)
             }
         ),
         0x027A: frozenset(  # Cold or hot water heat source equipment
