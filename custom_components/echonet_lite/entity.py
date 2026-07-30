@@ -66,6 +66,7 @@ def infer_platform(entity: EntityDefinition) -> Platform | None:
         | 3+ enum vals  | select              | sensor (ENUM) | None (skip)        |
         | 1 enum value  | None (skip)         | None (skip)   | button             |
         | numeric       | number              | sensor        | None (skip)        |
+        | numericValue  | None (skip)         | None (skip)   | None (skip)        |
 
     Args:
         entity: Entity definition to analyze.
@@ -83,6 +84,11 @@ def infer_platform(entity: EntityDefinition) -> Platform | None:
             if len(entity.enum_values) == 2:
                 return Platform.SWITCH if writable else Platform.BINARY_SENSOR
             return Platform.SELECT if writable else Platform.SENSOR
+        if entity.format is None:
+            # MRA "numericValue" properties (e.g. EPC 0xC2 unit/coefficient
+            # tables) are not exposed as HA entities themselves; they are
+            # only consumed internally via other entities' coefficient_epcs.
+            return None
         return Platform.NUMBER if writable else Platform.SENSOR
 
     # Write-only properties (get == notApplicable)
@@ -288,6 +294,14 @@ class EchonetLiteEntityDescription(EntityDescription):
     """ECHONET Property Code."""
     manufacturer_code: int | None = None
     """Required manufacturer code for vendor-specific entities (None = all)."""
+    coefficient_epcs: tuple[int, ...] = ()
+    """Sibling EPCs (MRA ``coefficient``) this property's value depends on.
+
+    Must also be polled (see :class:`EchonetLiteDescribedEntity`'s
+    ``_subscribed_epcs``) even though they are never exposed as their own
+    entity, or :class:`~pyhems.NumericCodec`'s coefficient resolution would
+    never see a value for them.
+    """
 
     def should_create(self, node: NodeState) -> bool:
         """Check if entity should be created for this node.
@@ -316,7 +330,7 @@ class EchonetLiteEntityDescription(EntityDescription):
 
         Use as ``**cls._common_kwargs(class_code, entity_def)`` inside a
         subclass :meth:`build_from_entity_def` override to inject the
-        five fields that are identical across all platforms, while spelling
+        fields that are identical across all platforms, while spelling
         out the platform-specific fields as named arguments for type-checker
         visibility.
         """
@@ -325,6 +339,7 @@ class EchonetLiteEntityDescription(EntityDescription):
             "epc": entity_def.epc,
             "entity_category": get_entity_category(class_code, entity_def.epc),
             "manufacturer_code": entity_def.manufacturer_code,
+            "coefficient_epcs": entity_def.coefficient_epcs or (),
         }
 
     @classmethod
@@ -338,7 +353,7 @@ class EchonetLiteEntityDescription(EntityDescription):
         Subclasses must override this classmethod.  The override should call
         ``cls(key=…, prop=…, **cls._common_kwargs(class_code, entity_def))``
         so that platform-specific fields are spelled out as named arguments
-        (enabling type-checker validation) while the five common fields are
+        (enabling type-checker validation) while the common fields are
         injected from :meth:`_common_kwargs`.
         """
         raise NotImplementedError  # pragma: no cover
@@ -399,7 +414,12 @@ class EchonetLiteDescribedEntity[DescriptionT: EchonetLiteEntityDescription](
         # ::TestDefinitionsStringsConsistency`` for the regression guard.
         self._attr_translation_key = description.translation_key
         self._epc = description.epc
-        self._subscribed_epcs = frozenset({description.epc})
+        # Coefficient EPCs (e.g. EPC 0xC2) are never exposed as their own
+        # entity, so this entity must subscribe to them directly or they
+        # would never actually be polled; see coefficient_epcs' docstring.
+        self._subscribed_epcs = frozenset({description.epc}) | frozenset(
+            description.coefficient_epcs
+        )
 
     @property
     @override
