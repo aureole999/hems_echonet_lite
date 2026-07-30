@@ -79,10 +79,16 @@
     "measured_instantaneous_chargingdischarging_current": "Measured instantaneous charging/discharging current",
     "measured_instantaneous_chargingdischarging_electric_energy": "Measured instantaneous charging/discharging electric energy",
     "measured_instantaneous_chargingdischarging_voltage": "Measured instantaneous charging/discharging voltage",
+    "measured_instantaneous_currents_r_phase": "Measured instantaneous currents - R phase",
+    "measured_instantaneous_currents_t_phase": "Measured instantaneous currents - T phase",
     "measured_instantaneous_electric_power": "Measured instantaneous electric power",
+    "measured_instantaneous_voltages_between_r_and_sn": "Measured instantaneous voltages - Between R and S(N)",
+    "measured_instantaneous_voltages_between_sn_and_t": "Measured instantaneous voltages - Between S(N) and T",
     "measured_temperature_of_water_in_water_heater": "Measured temperature of water in water heater",
     "measured_value_of_co2_concentration": "Measured value of CO2 concentration",
     "measured_value_of_room_relative_humidity": "Measured value of room relative humidity",
+    "minimummaximum_charging_electric_energy_maximum_charging_electric_energy": "Minimum/maximum charging electric energy - Maximum charging electric energy",
+    "minimummaximum_charging_electric_energy_minimum_charging_electric_energy": "Minimum/maximum charging electric energy - Minimum charging electric energy",
     "mute_off": "Mute OFF",
     "mute_on": "Mute ON",
     "mute_setting": "Mute setting",
@@ -1082,6 +1088,15 @@
       "class_0290_epc_b9": {
         "name": "Light level setting for night lighting"
       },
+      "class_0290_epc_c0": {
+        "name": "RGB setting for color lighting - Byte 1: R"
+      },
+      "class_0290_epc_c0_01": {
+        "name": "RGB setting for color lighting - Byte 2: G"
+      },
+      "class_0290_epc_c0_02": {
+        "name": "RGB setting for color lighting - Byte 3: B"
+      },
       "class_0291_epc_b0": {
         "name": "[%key:component::echonet_lite::common::light_level_setting%]"
       },
@@ -1106,6 +1121,51 @@
       "class_02a7_epc_c2": {
         "name": "EM target power value"
       },
+      "class_02a7_epc_c3": {
+        "name": "Command control parameter setting - Command control instruction number"
+      },
+      "class_02a7_epc_c3_04": {
+        "name": "Command control parameter setting - Power value for the instruction. (W)"
+      },
+      "class_02a7_epc_c4": {
+        "name": "Autonomous control parameter setting 1 - Width of dead band. (Plus side) (mHz)"
+      },
+      "class_02a7_epc_c4_02": {
+        "name": "Autonomous control parameter setting 1 - Width of dead band. (Minus side) (mHz)"
+      },
+      "class_02a7_epc_c4_04": {
+        "name": "Autonomous control parameter setting 1 - Rate of power control.  (Normal direction) (W/mHz)"
+      },
+      "class_02a7_epc_c4_08": {
+        "name": "Autonomous control parameter setting 1 - Rate of power control.  (Reverse direction) (W/mHz)"
+      },
+      "class_02a7_epc_c4_0c": {
+        "name": "Autonomous control parameter setting 1 - Power upper limit for autonomous control. (Normal direction) (W)"
+      },
+      "class_02a7_epc_c4_10": {
+        "name": "Autonomous control parameter setting 1 - Power upper limit for autonomous control. (Reverse direction) (W)"
+      },
+      "class_02a7_epc_c4_14": {
+        "name": "Autonomous control parameter setting 1 - Abnormal frequency deviation threshold (mHz)"
+      },
+      "class_02a7_epc_c5": {
+        "name": "Autonomous control parameter setting 2 - Time constant for filter. (LPF)"
+      },
+      "class_02a7_epc_c5_02": {
+        "name": "Autonomous control parameter setting 2 - Time constant for filter. (HPF)"
+      },
+      "class_02a7_epc_c5_04": {
+        "name": "Autonomous control parameter setting 2 - PI control coefficient. (Proportional gain)"
+      },
+      "class_02a7_epc_c5_06": {
+        "name": "Autonomous control parameter setting 2 - PI control coefficient. (Integral gain)"
+      },
+      "class_02a7_epc_c5_08": {
+        "name": "Autonomous control parameter setting 2 - Rate limiter. (Normal direction) (W/sec)"
+      },
+      "class_02a7_epc_c5_0c": {
+        "name": "Autonomous control parameter setting 2 - Rate limiter. (Reverse direction) (W/sec)"
+      },
       "class_02a7_epc_c7": {
         "name": "Correction value for reference frequency"
       },
@@ -1123,6 +1183,27 @@
       },
       "class_03b7_epc_e6": {
         "name": "Multi-refrigerating mode compartment temperature setting"
+      },
+      "class_03b9_epc_e3": {
+        "name": "Heating temperature setting - Left stove temperature setting"
+      },
+      "class_03b9_epc_e3_01": {
+        "name": "Heating temperature setting - Right stove temperature setting"
+      },
+      "class_03b9_epc_e3_02": {
+        "name": "Heating temperature setting - Far-side stove temperature setting"
+      },
+      "class_03b9_epc_e7": {
+        "name": "Heating power setting - Heating power of the left stove"
+      },
+      "class_03b9_epc_e7_02": {
+        "name": "Heating power setting - Heating power of the right stove"
+      },
+      "class_03b9_epc_e7_04": {
+        "name": "Heating power setting - Heating power of the far-side stove"
+      },
+      "class_03b9_epc_e7_06": {
+        "name": "Heating power setting - Heating power of the roaster"
       },
       "class_03ce_epc_ed": {
         "name": "Indicates lighting level in % installed inside of the showcase."
@@ -2261,6 +2342,18 @@
           "preheating": "[%key:component::echonet_lite::common::preheating%]"
         }
       },
+      "class_0130_epc_b8": {
+        "name": "Rated power consumption - Cooling"
+      },
+      "class_0130_epc_b8_02": {
+        "name": "Rated power consumption - Heating"
+      },
+      "class_0130_epc_b8_04": {
+        "name": "Rated power consumption - Dehumidifying"
+      },
+      "class_0130_epc_b8_06": {
+        "name": "Rated power consumption - Circulation"
+      },
       "class_0130_epc_b9": {
         "name": "Measured value of current consumption"
       },
@@ -2339,6 +2432,12 @@
           "undefined": "[%key:component::echonet_lite::common::undefined%]"
         }
       },
+      "class_0157_epc_b8": {
+        "name": "Rated power consumption of outdoor unit - Cooling"
+      },
+      "class_0157_epc_b8_04": {
+        "name": "Rated power consumption of outdoor unit - Heating"
+      },
       "class_0157_epc_be": {
         "name": "Measured outdoor unit temperature"
       },
@@ -2373,6 +2472,48 @@
       },
       "class_026b_epc_c1": {
         "name": "[%key:component::echonet_lite::common::measured_temperature_of_water_in_water_heater%]"
+      },
+      "class_026b_epc_cb": {
+        "name": "Expected electric energy at daytime heating shift time 1 - 10:00"
+      },
+      "class_026b_epc_cb_04": {
+        "name": "Expected electric energy at daytime heating shift time 1 - 13:00"
+      },
+      "class_026b_epc_cb_08": {
+        "name": "Expected electric energy at daytime heating shift time 1 - 15:00"
+      },
+      "class_026b_epc_cb_0c": {
+        "name": "Expected electric energy at daytime heating shift time 1 - 17:00"
+      },
+      "class_026b_epc_cc": {
+        "name": "Consumption of electric energy per hour 1 - 10:00"
+      },
+      "class_026b_epc_cc_02": {
+        "name": "Consumption of electric energy per hour 1 - 13:00"
+      },
+      "class_026b_epc_cc_04": {
+        "name": "Consumption of electric energy per hour 1 - 15:00"
+      },
+      "class_026b_epc_cc_06": {
+        "name": "Consumption of electric energy per hour 1 - 17:00"
+      },
+      "class_026b_epc_ce": {
+        "name": "Expected electric energy at daytime heating shift time 2 - 13:00"
+      },
+      "class_026b_epc_ce_04": {
+        "name": "Expected electric energy at daytime heating shift time 2 - 15:00"
+      },
+      "class_026b_epc_ce_08": {
+        "name": "Expected electric energy at daytime heating shift time 2 - 17:00"
+      },
+      "class_026b_epc_cf": {
+        "name": "Consumption of electric energy per hour 2 - 13:00"
+      },
+      "class_026b_epc_cf_02": {
+        "name": "Consumption of electric energy per hour 2 - 15:00"
+      },
+      "class_026b_epc_cf_04": {
+        "name": "Consumption of electric energy per hour 2 - 17:00"
       },
       "class_026b_epc_d8": {
         "name": "Remaining hot water volume"
@@ -2517,6 +2658,12 @@
       "class_027a_epc_e4": {
         "name": "Measured temperature of inward water (Entrance water Temperature)"
       },
+      "class_027a_epc_e9": {
+        "name": "Rated power consumption - Rated power consumption of heater (hot water) mode in watts"
+      },
+      "class_027a_epc_e9_02": {
+        "name": "Rated power consumption - Rated power consumption of cooler (cold water) mode in watts"
+      },
       "class_027a_epc_ea": {
         "name": "[%key:component::echonet_lite::common::power_consumption_measurement_method%]",
         "state": {
@@ -2620,6 +2767,30 @@
       "class_027d_epc_c7": {
         "name": "AC rated electric energy"
       },
+      "class_027d_epc_c8": {
+        "name": "Minimum/maximum charging electric power - Minimum"
+      },
+      "class_027d_epc_c8_04": {
+        "name": "Minimum/maximum charging electric power - Maximum"
+      },
+      "class_027d_epc_c9": {
+        "name": "Minimum/maximum discharging electric power - Minimum"
+      },
+      "class_027d_epc_c9_04": {
+        "name": "Minimum/maximum discharging electric power - Maximum"
+      },
+      "class_027d_epc_ca": {
+        "name": "Minimum/maximum charging current - Minimum"
+      },
+      "class_027d_epc_ca_02": {
+        "name": "Minimum/maximum charging current - Maximum"
+      },
+      "class_027d_epc_cb": {
+        "name": "Minimum/maximum discharging current - Minimum"
+      },
+      "class_027d_epc_cb_02": {
+        "name": "Minimum/maximum discharging current - Maximum"
+      },
       "class_027d_epc_cf": {
         "name": "Working operation status",
         "state": {
@@ -2665,6 +2836,30 @@
           "reverse_power_flow_acceptable": "System interconnection (reverse power flow acceptable)",
           "reverse_power_flow_not_acceptable": "[%key:component::echonet_lite::common::system_interconnected_type_reverse_power_flow_not_acceptable%]"
         }
+      },
+      "class_027d_epc_dc": {
+        "name": "Minimum/maximum charging power (Independent) - Minimum charging power"
+      },
+      "class_027d_epc_dc_04": {
+        "name": "Minimum/maximum charging power (Independent) - Maximum charging power"
+      },
+      "class_027d_epc_dd": {
+        "name": "Minimum/maximum discharging power (Independent) - Minimum discharging power"
+      },
+      "class_027d_epc_dd_04": {
+        "name": "Minimum/maximum discharging power (Independent) - Maximum discharging power"
+      },
+      "class_027d_epc_de": {
+        "name": "Minimum/maximum charging current (Independent) - Minimum charging current"
+      },
+      "class_027d_epc_de_02": {
+        "name": "Minimum/maximum charging current (Independent) - Maximum charging current"
+      },
+      "class_027d_epc_df": {
+        "name": "Minimum/maximum discharging current (Independent) - Minimum discharging current"
+      },
+      "class_027d_epc_df_02": {
+        "name": "Minimum/maximum discharging current (Independent) - Maximum discharging current"
       },
       "class_027d_epc_e2": {
         "name": "Remaining stored electricity 1"
@@ -2725,6 +2920,30 @@
           "undefined": "[%key:component::echonet_lite::common::undefined%]",
           "unknown": "Unknown of Chargeability"
         }
+      },
+      "class_027e_epc_c8": {
+        "name": "[%key:component::echonet_lite::common::minimummaximum_charging_electric_energy_minimum_charging_electric_energy%]"
+      },
+      "class_027e_epc_c8_04": {
+        "name": "[%key:component::echonet_lite::common::minimummaximum_charging_electric_energy_maximum_charging_electric_energy%]"
+      },
+      "class_027e_epc_c9": {
+        "name": "Minimum/maximum discharging electric energy - Minimum discharging electric energy"
+      },
+      "class_027e_epc_c9_04": {
+        "name": "Minimum/maximum discharging electric energy - Maximum discharging electric energy"
+      },
+      "class_027e_epc_ca": {
+        "name": "Minimum/maximum charging current - Minimum charging current"
+      },
+      "class_027e_epc_ca_02": {
+        "name": "Minimum/maximum charging current - Maximum charging current"
+      },
+      "class_027e_epc_cb": {
+        "name": "Minimum/maximum discharging current - Minimum discharging current"
+      },
+      "class_027e_epc_cb_02": {
+        "name": "Minimum/maximum discharging current - Maximum discharging current"
       },
       "class_027e_epc_cc": {
         "name": "Charger/Discharger type",
@@ -2828,6 +3047,306 @@
       "class_0287_epc_c6": {
         "name": "Measured instantaneous amount of electric energy"
       },
+      "class_0287_epc_c7": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_currents_r_phase%]"
+      },
+      "class_0287_epc_c7_02": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_currents_t_phase%]"
+      },
+      "class_0287_epc_c8": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_voltages_between_r_and_sn%]"
+      },
+      "class_0287_epc_c8_02": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_voltages_between_sn_and_t%]"
+      },
+      "class_0287_epc_d0": {
+        "name": "Measurement channel 1 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d0_04": {
+        "name": "Measurement channel 1 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d0_06": {
+        "name": "Measurement channel 1 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d1": {
+        "name": "Measurement channel 2 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d1_04": {
+        "name": "Measurement channel 2 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d1_06": {
+        "name": "Measurement channel 2 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d2": {
+        "name": "Measurement channel 3 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d2_04": {
+        "name": "Measurement channel 3 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d2_06": {
+        "name": "Measurement channel 3 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d3": {
+        "name": "Measurement channel 4 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d3_04": {
+        "name": "Measurement channel 4 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d3_06": {
+        "name": "Measurement channel 4 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d4": {
+        "name": "Measurement channel 5 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d4_04": {
+        "name": "Measurement channel 5 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d4_06": {
+        "name": "Measurement channel 5 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d5": {
+        "name": "Measurement channel 6 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d5_04": {
+        "name": "Measurement channel 6 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d5_06": {
+        "name": "Measurement channel 6 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d6": {
+        "name": "Measurement channel 7 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d6_04": {
+        "name": "Measurement channel 7 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d6_06": {
+        "name": "Measurement channel 7 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d7": {
+        "name": "Measurement channel 8 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d7_04": {
+        "name": "Measurement channel 8 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d7_06": {
+        "name": "Measurement channel 8 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d8": {
+        "name": "Measurement channel 9 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d8_04": {
+        "name": "Measurement channel 9 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d8_06": {
+        "name": "Measurement channel 9 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_d9": {
+        "name": "Measurement channel 10 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_d9_04": {
+        "name": "Measurement channel 10 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_d9_06": {
+        "name": "Measurement channel 10 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_da": {
+        "name": "Measurement channel 11 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_da_04": {
+        "name": "Measurement channel 11 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_da_06": {
+        "name": "Measurement channel 11 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_db": {
+        "name": "Measurement channel 12 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_db_04": {
+        "name": "Measurement channel 12 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_db_06": {
+        "name": "Measurement channel 12 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_dc": {
+        "name": "Measurement channel 13 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_dc_04": {
+        "name": "Measurement channel 13 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_dc_06": {
+        "name": "Measurement channel 13 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_dd": {
+        "name": "Measurement channel 14 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_dd_04": {
+        "name": "Measurement channel 14 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_dd_06": {
+        "name": "Measurement channel 14 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_de": {
+        "name": "Measurement channel 15 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_de_04": {
+        "name": "Measurement channel 15 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_de_06": {
+        "name": "Measurement channel 15 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_df": {
+        "name": "Measurement channel 16 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_df_04": {
+        "name": "Measurement channel 16 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_df_06": {
+        "name": "Measurement channel 16 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e0": {
+        "name": "Measurement channel 17 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e0_04": {
+        "name": "Measurement channel 17 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e0_06": {
+        "name": "Measurement channel 17 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e1": {
+        "name": "Measurement channel 18 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e1_04": {
+        "name": "Measurement channel 18 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e1_06": {
+        "name": "Measurement channel 18 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e2": {
+        "name": "Measurement channel 19 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e2_04": {
+        "name": "Measurement channel 19 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e2_06": {
+        "name": "Measurement channel 19 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e3": {
+        "name": "Measurement channel 20 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e3_04": {
+        "name": "Measurement channel 20 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e3_06": {
+        "name": "Measurement channel 20 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e4": {
+        "name": "Measurement channel 21 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e4_04": {
+        "name": "Measurement channel 21 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e4_06": {
+        "name": "Measurement channel 21 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e5": {
+        "name": "Measurement channel 22 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e5_04": {
+        "name": "Measurement channel 22 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e5_06": {
+        "name": "Measurement channel 22 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e6": {
+        "name": "Measurement channel 23 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e6_04": {
+        "name": "Measurement channel 23 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e6_06": {
+        "name": "Measurement channel 23 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e7": {
+        "name": "Measurement channel 24 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e7_04": {
+        "name": "Measurement channel 24 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e7_06": {
+        "name": "Measurement channel 24 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e8": {
+        "name": "Measurement channel 25 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e8_04": {
+        "name": "Measurement channel 25 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e8_06": {
+        "name": "Measurement channel 25 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_e9": {
+        "name": "Measurement channel 26 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_e9_04": {
+        "name": "Measurement channel 26 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_e9_06": {
+        "name": "Measurement channel 26 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_ea": {
+        "name": "Measurement channel 27 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_ea_04": {
+        "name": "Measurement channel 27 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_ea_06": {
+        "name": "Measurement channel 27 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_eb": {
+        "name": "Measurement channel 28 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_eb_04": {
+        "name": "Measurement channel 28 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_eb_06": {
+        "name": "Measurement channel 28 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_ec": {
+        "name": "Measurement channel 29 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_ec_04": {
+        "name": "Measurement channel 29 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_ec_06": {
+        "name": "Measurement channel 29 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_ed": {
+        "name": "Measurement channel 30 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_ed_04": {
+        "name": "Measurement channel 30 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_ed_06": {
+        "name": "Measurement channel 30 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_ee": {
+        "name": "Measurement channel 31 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_ee_04": {
+        "name": "Measurement channel 31 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_ee_06": {
+        "name": "Measurement channel 31 - Measured instantaneous current (T phase)"
+      },
+      "class_0287_epc_ef": {
+        "name": "Measurement channel 32 - Measured cumulative amount of electric power consumption"
+      },
+      "class_0287_epc_ef_04": {
+        "name": "Measurement channel 32 - Measured instantaneous current (R phase)"
+      },
+      "class_0287_epc_ef_06": {
+        "name": "Measurement channel 32 - Measured instantaneous current (T phase)"
+      },
       "class_0288_epc_d7": {
         "name": "[%key:component::echonet_lite::common::number_of_effective_digits_for_cumulative_amounts_of_electric_energy%]"
       },
@@ -2839,6 +3358,12 @@
       },
       "class_0288_epc_e7": {
         "name": "[%key:component::echonet_lite::common::measured_instantaneous_electric_power%]"
+      },
+      "class_0288_epc_e8": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_currents_r_phase%]"
+      },
+      "class_0288_epc_e8_02": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_currents_t_phase%]"
       },
       "class_028a_epc_c1": {
         "name": "Monthly maximum electric power demand"
@@ -2866,6 +3391,18 @@
       },
       "class_028d_epc_e7": {
         "name": "[%key:component::echonet_lite::common::measured_instantaneous_electric_power%]"
+      },
+      "class_028d_epc_e8": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_currents_r_phase%]"
+      },
+      "class_028d_epc_e8_02": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_currents_t_phase%]"
+      },
+      "class_028d_epc_e9": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_voltages_between_r_and_sn%]"
+      },
+      "class_028d_epc_e9_02": {
+        "name": "[%key:component::echonet_lite::common::measured_instantaneous_voltages_between_sn_and_t%]"
       },
       "class_028e_epc_d2": {
         "name": "Tolerance class",
@@ -2904,6 +3441,18 @@
       "class_028e_epc_ea": {
         "name": "Measured instantaneous electric power (output during a power outage)"
       },
+      "class_028f_epc_c1": {
+        "name": "Monthly maximum electric power demand (normal and reverse directions) - Normal direction"
+      },
+      "class_028f_epc_c1_04": {
+        "name": "Monthly maximum electric power demand (normal and reverse directions) - Reverse direction"
+      },
+      "class_028f_epc_c2": {
+        "name": "Cumulative maximum electric power demand (normal and reverse directions) - Normal direction"
+      },
+      "class_028f_epc_c2_04": {
+        "name": "Cumulative maximum electric power demand (normal and reverse directions) - Reverse direction"
+      },
       "class_028f_epc_c4": {
         "name": "[%key:component::echonet_lite::common::number_of_effective_digits_of_electric_power_demand%]"
       },
@@ -2915,6 +3464,24 @@
       },
       "class_028f_epc_ea": {
         "name": "Measured instantaneous electric energy"
+      },
+      "class_028f_epc_eb": {
+        "name": "Measured instantaneous currents 2 - R phase"
+      },
+      "class_028f_epc_eb_04": {
+        "name": "Measured instantaneous currents 2 - T phase"
+      },
+      "class_0290_epc_b4": {
+        "name": "Maximum specifiable values - Byte 1: light level"
+      },
+      "class_0290_epc_b4_01": {
+        "name": "Maximum specifiable values - Byte 2: light color"
+      },
+      "class_0290_epc_b5": {
+        "name": "Maximum value of settable level for night lighting - Byte 1: light level"
+      },
+      "class_0290_epc_b5_01": {
+        "name": "Maximum value of settable level for night lighting - Byte 2: light color"
       },
       "class_0290_epc_bf": {
         "name": "Lighting mode status in auto mode",
@@ -2937,6 +3504,18 @@
           "undefined": "[%key:component::echonet_lite::common::undefined%]",
           "unknown": "[%key:component::echonet_lite::common::unknown%]"
         }
+      },
+      "class_02a1_epc_c8": {
+        "name": "[%key:component::echonet_lite::common::minimummaximum_charging_electric_energy_minimum_charging_electric_energy%]"
+      },
+      "class_02a1_epc_c8_04": {
+        "name": "[%key:component::echonet_lite::common::minimummaximum_charging_electric_energy_maximum_charging_electric_energy%]"
+      },
+      "class_02a1_epc_ca": {
+        "name": "Minimum/maximum charging electric current - Minimum charging current"
+      },
+      "class_02a1_epc_ca_02": {
+        "name": "Minimum/maximum charging electric current - Maximum charging current"
       },
       "class_02a1_epc_cc": {
         "name": "Charger type",
@@ -3015,8 +3594,110 @@
       "class_02a7_epc_d0": {
         "name": "Transmittable/receivable cycle"
       },
+      "class_02a7_epc_d2": {
+        "name": "Values of AC max power - Maximum input power"
+      },
+      "class_02a7_epc_d2_04": {
+        "name": "Values of AC max power - Maximum output power"
+      },
       "class_02a7_epc_d3": {
         "name": "Value of contract power"
+      },
+      "class_02a7_epc_d4": {
+        "name": "Device control performance - Upper limit of dead band width. (mHz)"
+      },
+      "class_02a7_epc_d4_02": {
+        "name": "Device control performance - Lower limit of dead band width. (mHz)"
+      },
+      "class_02a7_epc_d4_04": {
+        "name": "Device control performance - Upper limit of power change rate. (W/mHz)"
+      },
+      "class_02a7_epc_d4_08": {
+        "name": "Device control performance - Lower limit of power change rate. (W/mHz)"
+      },
+      "class_02a7_epc_d4_0c": {
+        "name": "Device control performance - Upper limit of power change speed. (W/sec)"
+      },
+      "class_02a7_epc_d4_10": {
+        "name": "Device control performance - Lower limit of power change speed. (W/sec)"
+      },
+      "class_02a7_epc_d8": {
+        "name": "Measured instantaneous values of PCS - Frequency measurement value (mHz)"
+      },
+      "class_02a7_epc_d8_02": {
+        "name": "Measured instantaneous values of PCS - Instantaneous power measurement value at device point (W)"
+      },
+      "class_02a7_epc_d8_06": {
+        "name": "Measured instantaneous values of PCS - Instantaneous power measurement value at power receiving point (W)"
+      },
+      "class_02a7_epc_d9": {
+        "name": "Response information - AC power measurement (W)"
+      },
+      "class_02a7_epc_d9_04": {
+        "name": "Response information - Power value of EM control (W)"
+      },
+      "class_02a7_epc_d9_08": {
+        "name": "Response information - Power value of command control (W)"
+      },
+      "class_02a7_epc_d9_0c": {
+        "name": "Response information - Power value of autonomous control (W)"
+      },
+      "class_02a7_epc_d9_10": {
+        "name": "Response information - Command control instruction number"
+      },
+      "class_02a7_epc_d9_14": {
+        "name": "Response information - Grid frequency deviation (mHz)"
+      },
+      "class_02a7_epc_da": {
+        "name": "Instantaneous input and output power capability value - Instantaneous input power capability value"
+      },
+      "class_02a7_epc_da_04": {
+        "name": "Instantaneous input and output power capability value - Instantaneous output power capability value"
+      },
+      "class_02a7_epc_db": {
+        "name": "Instantaneous chargeable and dischargeable power values - Instantaneous chargeable power value (W)"
+      },
+      "class_02a7_epc_db_04": {
+        "name": "Instantaneous chargeable and dischargeable power values - Instantaneous dischargeable power value (W)"
+      },
+      "class_02a7_epc_dc": {
+        "name": "Battery status - Chargeable electric energy value (AC value) (Wh)"
+      },
+      "class_02a7_epc_dc_04": {
+        "name": "Battery status - Dischargeable electric energy value (AC value) (Wh)"
+      },
+      "class_02a7_epc_dc_08": {
+        "name": "Battery status - Remaining stored electricity (DC value) (Wh)"
+      },
+      "class_02a7_epc_dc_0c": {
+        "name": "Battery status - Remaining stored electricity (State of charge) (%)"
+      },
+      "class_02a7_epc_dc_0d": {
+        "name": "Battery status - State of Health (%)"
+      },
+      "class_02a7_epc_de": {
+        "name": "Cumulative electric energy measurement values - Measured cumulative amount of input electric energy for PCS (Normal direction at device point) (Wh)"
+      },
+      "class_02a7_epc_de_04": {
+        "name": "Cumulative electric energy measurement values - Measured cumulative amount of output electric energy by PCS (Reverse direction at device point) (Wh)"
+      },
+      "class_02a7_epc_de_08": {
+        "name": "Cumulative electric energy measurement values - Measured cumulative amount of electric energy bought from grid (Wh)"
+      },
+      "class_02a7_epc_de_0c": {
+        "name": "Cumulative electric energy measurement values - Measured cumulative amount of electric energy sold for grid (Wh)"
+      },
+      "class_02a7_epc_de_10": {
+        "name": "Cumulative electric energy measurement values - Measured cumulative amount of load electric energy (Wh)"
+      },
+      "class_02a7_epc_de_14": {
+        "name": "Cumulative electric energy measurement values - Measured cumulative amount of electric energy by PV (DC value) (Wh)"
+      },
+      "class_02a7_epc_de_18": {
+        "name": "Cumulative electric energy measurement values - Measured cumulative amount of charge electric energy to battery (DC value) (Wh)"
+      },
+      "class_02a7_epc_de_1c": {
+        "name": "Cumulative electric energy measurement values - Measured cumulative amount of discharge electric energy from battery (DC value) (Wh)"
       },
       "class_03b7_epc_d1": {
         "name": "Measured refrigerator compartment temperature"
@@ -3032,6 +3713,12 @@
       },
       "class_03b7_epc_d5": {
         "name": "Measured multi-refrigerating mode compartment temperature"
+      },
+      "class_03b7_epc_d8": {
+        "name": "Compressor rotation speed - Maximum rotation speed level"
+      },
+      "class_03b7_epc_d8_01": {
+        "name": "Compressor rotation speed - Rotation speed level(Value 0 represents Stop)"
       },
       "class_03b7_epc_da": {
         "name": "Measured electric current consumption"

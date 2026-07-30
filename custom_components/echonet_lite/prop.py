@@ -83,9 +83,15 @@ class NumericProp:
     codec: NumericCodec
 
     def get(self, node: NodeState) -> int | float | None:
-        """Return decoded value from coordinator state, or None if unavailable."""
+        """Return decoded value from coordinator state, or None if unavailable.
+
+        Passes ``node`` through to :meth:`NumericCodec.decode` so that
+        properties whose unit depends on a sibling EPC (``coefficient_epcs``,
+        e.g. EPC 0xC2) can resolve their current multiplier; codecs without a
+        coefficient dependency ignore it.
+        """
         edt = node.properties.get(self.epc)
-        return self.codec.decode(edt) if edt is not None else None
+        return self.codec.decode(edt, node) if edt is not None else None
 
     def make_property(self, value: float) -> Property:
         """Create a Property instance for this EPC with the encoded value."""

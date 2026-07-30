@@ -289,6 +289,8 @@ MRA_UNIT_TO_HA_UNIT: dict[str, str | None] = {
     "Ah": None,
     "digit": None,
     "klux": None,
+    "W/mHz": None,
+    "W/sec": None,
 }
 
 
