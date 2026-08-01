@@ -5,7 +5,7 @@ from contextlib import suppress
 import logging
 from typing import Final
 
-from pyhems import REGISTRY, DeviceManager, HemsClient, PropertyPoller
+from pyhems import REGISTRY, DeviceManager, HemsClient, PropertyPoller, PropertyRole
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -24,7 +24,6 @@ from .const import (
     EPC_MANUFACTURER_CODE,
     EPC_PRODUCT_CODE,
     EPC_SERIAL_NUMBER,
-    FAST_POLL_EXCLUDE_EPCS,
     RUNTIME_MONITOR_INTERVAL,
     RUNTIME_MONITOR_MAX_SILENCE,
     STABLE_CLASS_CODES,
@@ -83,11 +82,11 @@ _MONITORED_EPCS: Final[dict[int, frozenset[int]]] = _build_monitored_epcs()
 # EPCs that should be polled at a higher frequency (e.g. instantaneous power),
 # per device class code, built once at import time.
 #
-# The candidate set is derived automatically: any EPC whose English name
-# contains "instantaneous" is treated as a fast-poll candidate. This mirrors
-# how the MRA data itself is machine-generated, so new device classes/EPCs
-# added upstream are picked up without code changes here. FAST_POLL_EXCLUDE_EPCS
-# provides a manual override for cases where the heuristic is wrong.
+# The candidate set is the curated PropertyRole.INSTANTANEOUS role (see
+# pyhems.definitions.PropertyRole and scripts/property_roles.xlsx), not a
+# name-based heuristic: whether a property is worth fast-polling is a
+# protocol-level fact about the property, not something this integration
+# should re-derive from its English name.
 #
 # Only EPCs already present in _MONITORED_EPCS are kept: a fast-poll
 # candidate that isn't monitored/polled at all (e.g. belongs only to a
@@ -98,9 +97,8 @@ def _build_fast_poll_epcs() -> dict[int, frozenset[int]]:
         candidates = frozenset(
             entity_def.epc
             for entity_def in entity_defs
-            if "instantaneous" in entity_def.name_en.lower()
+            if entity_def.role is PropertyRole.INSTANTANEOUS
         )
-        candidates -= FAST_POLL_EXCLUDE_EPCS.get(class_code, frozenset())
         candidates &= _MONITORED_EPCS.get(class_code, frozenset())
         if candidates:
             result[class_code] = candidates

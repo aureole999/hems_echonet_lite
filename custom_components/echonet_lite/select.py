@@ -52,14 +52,13 @@ class EchonetLiteSelectEntityDescription(
     @override
     def build_from_entity_def(
         cls,
-        class_code: int,
         entity_def: EntityDefinition,
     ) -> EchonetLiteSelectEntityDescription:
         """Construct a select description from an EntityDefinition."""
         return cls(
             key=f"{entity_def.epc:02x}",
             prop=EnumProp.from_entity_def(entity_def),
-            **cls._common_kwargs(class_code, entity_def),
+            **cls._common_kwargs(entity_def),
         )
 
 
