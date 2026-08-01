@@ -93,7 +93,6 @@ class EchonetLiteBinarySensorEntityDescription(
     @override
     def build_from_entity_def(
         cls,
-        class_code: int,
         entity_def: EntityDefinition,
     ) -> EchonetLiteBinarySensorEntityDescription:
         """Construct a binary sensor description from an EntityDefinition."""
@@ -101,7 +100,7 @@ class EchonetLiteBinarySensorEntityDescription(
             key=f"{entity_def.epc:02x}",
             device_class=_infer_binary_device_class(entity_def),
             prop=BinaryProp.from_entity_def(entity_def),
-            **cls._common_kwargs(class_code, entity_def),
+            **cls._common_kwargs(entity_def),
         )
 
 

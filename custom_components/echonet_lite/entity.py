@@ -323,21 +323,20 @@ class EchonetLiteEntityDescription(EntityDescription):
     @classmethod
     def _common_kwargs(
         cls,
-        class_code: int,
         entity_def: EntityDefinition,
     ) -> dict:
         """Return the common kwargs shared by every platform description.
 
-        Use as ``**cls._common_kwargs(class_code, entity_def)`` inside a
-        subclass :meth:`build_from_entity_def` override to inject the
-        fields that are identical across all platforms, while spelling
-        out the platform-specific fields as named arguments for type-checker
+        Use as ``**cls._common_kwargs(entity_def)`` inside a subclass
+        :meth:`build_from_entity_def` override to inject the fields that are
+        identical across all platforms, while spelling out the
+        platform-specific fields as named arguments for type-checker
         visibility.
         """
         return {
             "translation_key": entity_def.id,
             "epc": entity_def.epc,
-            "entity_category": get_entity_category(class_code, entity_def.epc),
+            "entity_category": get_entity_category(entity_def),
             "manufacturer_code": entity_def.manufacturer_code,
             "coefficient_epcs": entity_def.coefficient_epcs or (),
         }
@@ -345,14 +344,13 @@ class EchonetLiteEntityDescription(EntityDescription):
     @classmethod
     def build_from_entity_def(
         cls,
-        class_code: int,
         entity_def: EntityDefinition,
     ) -> Self:
         """Construct an instance from a pyhems EntityDefinition.
 
         Subclasses must override this classmethod.  The override should call
-        ``cls(key=…, prop=…, **cls._common_kwargs(class_code, entity_def))``
-        so that platform-specific fields are spelled out as named arguments
+        ``cls(key=…, prop=…, **cls._common_kwargs(entity_def))`` so that
+        platform-specific fields are spelled out as named arguments
         (enabling type-checker validation) while the common fields are
         injected from :meth:`_common_kwargs`.
         """
@@ -440,7 +438,7 @@ def build_platform_descriptions[DescriptionT: EchonetLiteEntityDescription](
 
     Each ``description_cls`` must override :meth:`EchonetLiteEntityDescription.
     build_from_entity_def` to construct an instance with named platform-specific
-    arguments plus ``**cls._common_kwargs(class_code, entity_def)``.
+    arguments plus ``**cls._common_kwargs(entity_def)``.
 
     Args:
         platform_type: Target platform (e.g. Platform.SENSOR).
@@ -454,7 +452,7 @@ def build_platform_descriptions[DescriptionT: EchonetLiteEntityDescription](
     for class_code, entity_defs in REGISTRY.entities.items():
         excluded = DEDICATED_PLATFORM_EPCS.get(class_code, frozenset())
         descriptions[class_code] = [
-            description_cls.build_from_entity_def(class_code, entity_def)
+            description_cls.build_from_entity_def(entity_def)
             for entity_def in entity_defs
             if infer_platform(entity_def) == platform_type
             and entity_def.epc not in excluded
