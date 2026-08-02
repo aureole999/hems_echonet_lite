@@ -104,12 +104,20 @@ _PYHEMS_SPECIAL_STATE_TO_ACTION: dict[str, HVACAction | None] = {
     "heat_removal": HVACAction.IDLE,  # heat removal
 }
 
-# Swing mode mapping (0xA3 Swing direction setting)
-_HA_TO_ECHONET_SWING: dict[str, int] = {
-    SWING_OFF: 0x31,
-    SWING_VERTICAL: 0x41,
-    SWING_HORIZONTAL: 0x42,
-    SWING_BOTH: 0x43,
+# Swing mode mapping (0xA3 Swing direction setting).
+# Home Assistant exposes standard swing constants, while pyhems exposes the
+# protocol-defined enum keys from the registry.
+_HA_TO_PYHEMS_SWING: dict[str, str] = {
+    SWING_OFF: "off",
+    SWING_VERTICAL: "vertical",
+    SWING_HORIZONTAL: "horizontal",
+    SWING_BOTH: "vertical_and_horizontal",
+}
+_PYHEMS_TO_HA_SWING: dict[str, str] = {
+    "off": SWING_OFF,
+    "vertical": SWING_VERTICAL,
+    "horizontal": SWING_HORIZONTAL,
+    "vertical_and_horizontal": SWING_BOTH,
 }
 
 
@@ -145,9 +153,7 @@ _DESCRIPTIONS: dict[int, EchonetLiteClimateEntityDescription] = {
         room_temp_prop=NumericProp.from_registry(CC_AC, EPC_ROOM_TEMPERATURE),
         humidity_prop=NumericProp.from_registry(CC_AC, EPC_ROOM_HUMIDITY),
         fan_mode_prop=EnumProp.from_registry(CC_AC, EPC_FAN_SPEED),
-        swing_mode_prop=EnumProp.from_mapping(
-            EPC_SWING_AIR_FLOW, dict(_HA_TO_ECHONET_SWING)
-        ),
+        swing_mode_prop=EnumProp.from_registry(CC_AC, EPC_SWING_AIR_FLOW),
     )
 }
 
@@ -216,7 +222,7 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
             self._attr_fan_modes = description.fan_mode_prop.options
         if EPC_SWING_AIR_FLOW in node.set_epcs:
             features |= ClimateEntityFeature.SWING_MODE
-            swing_modes = list(_HA_TO_ECHONET_SWING.keys())
+            swing_modes = list(_HA_TO_PYHEMS_SWING)
         if EPC_OPERATION_STATUS in node.set_epcs:
             features |= ClimateEntityFeature.TURN_ON
             features |= ClimateEntityFeature.TURN_OFF
@@ -267,7 +273,8 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
     @override
     def swing_mode(self) -> str | None:
         """Return the current swing mode based on vertical/horizontal settings."""
-        return self.entity_description.swing_mode_prop.get(self._node)
+        key = self.entity_description.swing_mode_prop.get(self._node)
+        return _PYHEMS_TO_HA_SWING.get(key) if key is not None else None
 
     @property
     @override
@@ -384,13 +391,17 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
     @override
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set the swing mode."""
-        if swing_mode not in _HA_TO_ECHONET_SWING:
+        pyhems_key = _HA_TO_PYHEMS_SWING.get(swing_mode)
+        if pyhems_key is None:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="unsupported_value",
                 translation_placeholders={"value": swing_mode},
             )
-        await self._async_send_prop(self.entity_description.swing_mode_prop, swing_mode)
+        await self._async_send_prop(
+            self.entity_description.swing_mode_prop,
+            pyhems_key,
+        )
 
     def _infer_auto_action(self) -> HVACAction:
         """Infer HVAC action for AUTO mode from temperatures."""
