@@ -112,6 +112,23 @@
         }
       }
     },
+    "sensor": {
+      "cumulative_energy": {
+        "name": "チャンネル {channel} 積算電力量"
+      },
+      "cumulative_energy_forward": {
+        "name": "チャンネル {channel} 積算電力量 (正方向)"
+      },
+      "cumulative_energy_reverse": {
+        "name": "チャンネル {channel} 積算電力量 (逆方向)"
+      },
+      "duplex_instantaneous_power": {
+        "name": "チャンネル {channel} 瞬時電力"
+      },
+      "simplex_instantaneous_power": {
+        "name": "チャンネル {channel} 瞬時電力"
+      }
+    },
     "water_heater": {
       "electric_water_heater": {
         "state_attributes": {

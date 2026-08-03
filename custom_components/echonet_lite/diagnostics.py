@@ -3,14 +3,19 @@
 from collections.abc import Mapping
 from typing import Any
 
-from pyhems import DeviceManager, NodeState
+from pyhems import DeviceManager, NodeState, decode_collection_page
 
 from homeassistant.components.diagnostics import REDACTED, async_redact_data
 from homeassistant.const import CONF_UNIQUE_ID
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import CONF_INTERFACE, DOMAIN
+from .const import (
+    COLLECTION_SENSOR_PROJECTIONS,
+    CONF_INTERFACE,
+    DOMAIN,
+    EXCLUDED_EPCS_BY_CLASS,
+)
 from .runtime import EchonetLiteConfigEntry
 
 TO_REDACT = {
@@ -41,11 +46,45 @@ def _format_properties(properties: Mapping[int, bytes]) -> dict[str, str]:
     }
 
 
+def _collection_pages(node: NodeState) -> dict[str, Any]:
+    """Return minimal decode status for this node's collection (list) properties.
+
+    Reports ``start``/``count``/``ok`` per curated projection (see
+    const.py's ``COLLECTION_SENSOR_PROJECTIONS``), not the decoded item
+    values themselves — full item lists and history are intentionally kept
+    out of diagnostics.
+    """
+    excluded = EXCLUDED_EPCS_BY_CLASS.get(node.eoj.class_code, frozenset())
+    result: dict[str, Any] = {}
+    if excluded:
+        result["suppressed_epcs"] = _format_epcs(excluded)
+    pages: dict[str, Any] = {}
+    for projection in COLLECTION_SENSOR_PROJECTIONS:
+        if projection.class_code != node.eoj.class_code:
+            continue
+        key = f"0x{projection.result_epc:02X}"
+        edt = node.properties.get(projection.result_epc)
+        if edt is None:
+            pages[key] = {"ok": False, "start": None, "count": None}
+            continue
+        page = decode_collection_page(
+            node.eoj.class_code, projection.result_epc, edt, node
+        )
+        pages[key] = (
+            {"ok": True, "start": page.start, "count": page.count}
+            if page is not None
+            else {"ok": False, "start": None, "count": None}
+        )
+    if pages:
+        result["pages"] = pages
+    return result
+
+
 def _node_to_dict(node: NodeState, device_manager: DeviceManager) -> dict[str, Any]:
     """Serialize ``NodeState`` into a diagnostics-friendly dictionary."""
     eoj = node.eoj
 
-    return {
+    node_dict = {
         "device_key": node.device_key,
         "eoj": f"0x{eoj:06X}",
         "class_code": f"0x{eoj.class_code:04X}",
@@ -72,6 +111,9 @@ def _node_to_dict(node: NodeState, device_manager: DeviceManager) -> dict[str, A
         ),
         "properties": _format_properties(node.properties),
     }
+    if collection := _collection_pages(node):
+        node_dict["collection"] = collection
+    return node_dict
 
 
 def _add_poller_stats(
