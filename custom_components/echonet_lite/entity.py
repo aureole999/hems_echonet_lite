@@ -21,6 +21,7 @@ from .const import (
     ATTR_EPC,
     DEDICATED_PLATFORM_EPCS,
     DOMAIN,
+    EXCLUDED_EPCS_BY_CLASS,
     RUNTIME_MONITOR_MAX_SILENCE,
     get_entity_category,
 )
@@ -450,7 +451,9 @@ def build_platform_descriptions[DescriptionT: EchonetLiteEntityDescription](
     """
     descriptions: dict[int, list[DescriptionT]] = {}
     for class_code, entity_defs in REGISTRY.entities.items():
-        excluded = DEDICATED_PLATFORM_EPCS.get(class_code, frozenset())
+        excluded = DEDICATED_PLATFORM_EPCS.get(
+            class_code, frozenset()
+        ) | EXCLUDED_EPCS_BY_CLASS.get(class_code, frozenset())
         descriptions[class_code] = [
             description_cls.build_from_entity_def(entity_def)
             for entity_def in entity_defs

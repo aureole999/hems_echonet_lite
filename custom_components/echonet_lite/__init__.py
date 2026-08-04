@@ -5,13 +5,21 @@ from contextlib import suppress
 import logging
 from typing import Final
 
-from pyhems import REGISTRY, DeviceManager, HemsClient, PropertyPoller, PropertyRole
+from pyhems import (
+    REGISTRY,
+    DeviceManager,
+    HemsClient,
+    PropertyPoller,
+    PropertyRole,
+    get_collection_binding,
+)
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 
 from .const import (
+    COLLECTION_SENSOR_PROJECTIONS,
     CONF_ENABLE_EXPERIMENTAL,
     CONF_INTERFACE,
     DEDICATED_PLATFORM_EPCS,
@@ -24,6 +32,7 @@ from .const import (
     EPC_MANUFACTURER_CODE,
     EPC_PRODUCT_CODE,
     EPC_SERIAL_NUMBER,
+    EXCLUDED_EPCS_BY_CLASS,
     RUNTIME_MONITOR_INTERVAL,
     RUNTIME_MONITOR_MAX_SILENCE,
     STABLE_CLASS_CODES,
@@ -59,11 +68,30 @@ PLATFORMS: Final = [
 
 # EPCs to monitor (poll/notify) per device class code, built once at import time.
 #
-# Three layers are merged:
+# Four layers are merged/removed:
 #  1. Definition-driven EPCs from the pyhems REGISTRY (sensor/switch/select …)
 #  2. Dedicated-platform EPCs from DEDICATED_PLATFORM_EPCS (climate/fan/cover …)
 #  3. EPC 0x81 (Installation Location) — mandatory super-class property that
 #     must be monitored for every known class even if absent from the registry.
+#  4. EXCLUDED_EPCS_BY_CLASS EPCs are removed (e.g. class 0x0287's legacy
+#     0xD0-0xEF), then COLLECTION_SENSOR_PROJECTIONS' EPCs are added back —
+#     these are not in the pyhems REGISTRY (paged list properties have no
+#     scalar EntityDefinition) but must still be polled for the dynamic,
+#     per-node collection sensor entities built in sensor.py.
+def _collection_projection_epcs(class_code: int) -> frozenset[int]:
+    """Return the EPCs needed by class_code's curated collection projections."""
+    epcs: set[int] = set()
+    for projection in COLLECTION_SENSOR_PROJECTIONS:
+        if projection.class_code != class_code:
+            continue
+        epcs.add(projection.result_epc)
+        epcs.update(projection.coefficient_epcs)
+        binding = get_collection_binding(class_code, projection.result_epc)
+        if binding is not None and binding.count_epc is not None:
+            epcs.add(binding.count_epc)
+    return frozenset(epcs)
+
+
 def _build_monitored_epcs() -> dict[int, frozenset[int]]:
     result: dict[int, frozenset[int]] = {
         class_code: frozenset(entity_def.epc for entity_def in entity_defs)
@@ -73,6 +101,12 @@ def _build_monitored_epcs() -> dict[int, frozenset[int]]:
         result[class_code] = result.get(class_code, frozenset()) | epcs
     for class_code in list(result):
         result[class_code] = result[class_code] | {EPC_INSTALLATION_LOCATION}
+    for class_code, excluded in EXCLUDED_EPCS_BY_CLASS.items():
+        result[class_code] = result.get(class_code, frozenset()) - excluded
+    for class_code in {p.class_code for p in COLLECTION_SENSOR_PROJECTIONS}:
+        result[class_code] = result.get(class_code, frozenset()) | (
+            _collection_projection_epcs(class_code)
+        )
     return result
 
 
@@ -91,6 +125,10 @@ _MONITORED_EPCS: Final[dict[int, frozenset[int]]] = _build_monitored_epcs()
 # Only EPCs already present in _MONITORED_EPCS are kept: a fast-poll
 # candidate that isn't monitored/polled at all (e.g. belongs only to a
 # disabled experimental class) should not be introduced by this table alone.
+#
+# COLLECTION_SENSOR_PROJECTIONS entries marked ``fast_poll=True`` (e.g. class
+# 0x0287's instantaneous power lists) are added the same way, since they have
+# no scalar EntityDefinition/PropertyRole to derive a role from.
 def _build_fast_poll_epcs() -> dict[int, frozenset[int]]:
     result: dict[int, frozenset[int]] = {}
     for class_code, entity_defs in REGISTRY.entities.items():
@@ -102,6 +140,16 @@ def _build_fast_poll_epcs() -> dict[int, frozenset[int]]:
         candidates &= _MONITORED_EPCS.get(class_code, frozenset())
         if candidates:
             result[class_code] = candidates
+    for projection in COLLECTION_SENSOR_PROJECTIONS:
+        if not projection.fast_poll:
+            continue
+        candidates = frozenset({projection.result_epc}) & _MONITORED_EPCS.get(
+            projection.class_code, frozenset()
+        )
+        if candidates:
+            result[projection.class_code] = (
+                result.get(projection.class_code, frozenset()) | candidates
+            )
     return result
 
 

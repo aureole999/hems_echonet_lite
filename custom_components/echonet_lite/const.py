@@ -1,12 +1,16 @@
 """Constants for the HEMS Echonet Lite integration."""
 
+from dataclasses import dataclass
 from datetime import timedelta
 import re
 
 from pyhems import EntityDefinition, PropertyRole
 
 from homeassistant.components.number import NumberDeviceClass as NumberDC
-from homeassistant.components.sensor import SensorDeviceClass as SensorDC
+from homeassistant.components.sensor import (
+    SensorDeviceClass as SensorDC,
+    SensorStateClass,
+)
 from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -66,10 +70,15 @@ CLASS_CODE_ELECTRICALLY_OPERATED_BLIND = 0x0260
 CLASS_CODE_ELECTRICALLY_OPERATED_SHUTTER = 0x0263
 CLASS_CODE_ELECTRIC_WATER_HEATER = 0x026B
 CLASS_CODE_ELECTRIC_LOCK = 0x026F
+CLASS_CODE_INSTANTANEOUS_WATER_HEATER = 0x0272
 CLASS_CODE_HOUSEHOLD_SOLAR_POWER_GENERATION = 0x0279
 CLASS_CODE_STORAGE_BATTERY = 0x027D
+CLASS_CODE_WATER_FLOW_METER = 0x0281
+CLASS_CODE_GAS_METER = 0x0282
+CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING = 0x0287
 CLASS_CODE_GENERAL_LIGHTING = 0x0290
 CLASS_CODE_MONO_FUNCTIONAL_LIGHTING = 0x0291
+CLASS_CODE_RICE_COOKER = 0x03BB
 CLASS_CODE_SWITCH = 0x05FD  # Switch (supporting JEM-A/HA terminals)
 CLASS_CODE_CONTROLLER = 0x05FF
 
@@ -116,6 +125,16 @@ EPC_LOCK_SETTING_1 = 0xE0
 EPC_LOCK_SETTING_2 = 0xE1
 EPC_LOCK_ALARM_STATUS = 0xE5
 
+# Class-specific EPCs used by the power distribution board metering
+# (branch circuit) collection sensor projections. 0xD0-0xEF (legacy fixed
+# 32-channel layout) are intentionally excluded (see
+# EXCLUDED_EPCS_BY_CLASS) in favor of the modern array EPCs below.
+EPC_SIMPLEX_CUMULATIVE_ENERGY_LIST = 0xB3
+EPC_SIMPLEX_INSTANTANEOUS_POWER_LIST = 0xB7
+EPC_DUPLEX_CUMULATIVE_ENERGY_LIST = 0xBA
+EPC_DUPLEX_INSTANTANEOUS_POWER_LIST = 0xBE
+EPC_UNIT_FOR_CUMULATIVE_ELECTRIC_ENERGY = 0xC2
+
 # Stable (non-experimental) device class codes
 # These device classes have been verified with real hardware.
 # Other device classes are considered experimental.
@@ -125,8 +144,14 @@ STABLE_CLASS_CODES: frozenset[int] = frozenset(
         CLASS_CODE_AIR_CLEANER,
         CLASS_CODE_ELECTRIC_WATER_HEATER,
         CLASS_CODE_ELECTRIC_LOCK,
+        CLASS_CODE_INSTANTANEOUS_WATER_HEATER,
         CLASS_CODE_HOUSEHOLD_SOLAR_POWER_GENERATION,
         CLASS_CODE_STORAGE_BATTERY,
+        CLASS_CODE_WATER_FLOW_METER,
+        CLASS_CODE_GAS_METER,
+        CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        CLASS_CODE_MONO_FUNCTIONAL_LIGHTING,
+        CLASS_CODE_RICE_COOKER,
         CLASS_CODE_SWITCH,
         CLASS_CODE_CONTROLLER,
     }
@@ -209,6 +234,175 @@ DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
         }
     ),
 }
+
+# EPCs permanently excluded from monitored/fast-poll EPC sets and from
+# scalar entity generation, per device class code. Unlike
+# DEDICATED_PLATFORM_EPCS (owned by another platform), these EPCs are not
+# used by this integration at all.
+#
+# Class 0x0287 (power distribution board metering) EPCs 0xD0-0xEF are the
+# legacy fixed 32-channel measurement layout, superseded by the modern
+# array EPCs (0xB1/0xB3/0xB7/0xB8/0xBA/0xBE, see
+# COLLECTION_SENSOR_PROJECTIONS below). Including both would create up to
+# 96 redundant entities and risk oversized Get requests being split across
+# frames; see docs/ha-0287-epc-be-implementation-report-v2.md section 6.2.
+EXCLUDED_EPCS_BY_CLASS: dict[int, frozenset[int]] = {
+    CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING: frozenset(range(0xD0, 0xF0)),
+}
+
+
+# ============================================================================
+# Collection (paged list) sensor projections
+# ============================================================================
+# Data-driven HA sensor projections for MRA properties that describe a
+# variable-length list rather than a single scalar value (see
+# pyhems.definitions.CollectionBinding / PropertyValueDefinition). Unlike
+# DEDICATED_PLATFORM_EPCS, entity creation for these EPCs is dynamic
+# (one entity per channel, per node) — see sensor.py's collection entity
+# factory — since the channel count is only known once the sibling "count"
+# EPC (e.g. 0xB1/0xB8) has been read from the device.
+#
+# Adding a projection here is the *only* class-specific step for a new
+# collection EPC: the decode path (pyhems.decode_collection_page) and the HA
+# entity factory (sensor.py) are both fully generic.
+
+
+@dataclass(frozen=True, kw_only=True)
+class CollectionFieldProjection:
+    """HA projection metadata for one field decoded from a collection item.
+
+    Attributes:
+        item_field: The item's ObjectField key (see pyhems
+          ``CollectionBinding.items_path``), or ``None`` when items decode to
+          a bare scalar rather than an object (e.g. instantaneous power).
+        translation_key: Shared translation key (see ``strings.json``
+          ``common`` section) used by every channel entity for this field;
+          the channel number is passed via ``translation_placeholders``.
+        device_class: HA sensor device class.
+        state_class: HA sensor state class.
+        unit: Native unit of measurement.
+        unique_id_suffix: Suffix appended after the channel number in the
+          entity's unique_id (e.g. ``"instantaneous_power"``).
+    """
+
+    item_field: str | None
+    translation_key: str
+    device_class: SensorDC
+    state_class: SensorStateClass
+    unit: str
+    unique_id_suffix: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class CollectionSensorProjection:
+    """Data-driven HA sensor projection for one collection (list) property.
+
+    Attributes:
+        class_code: ECHONET Lite class code.
+        result_epc: EPC of the paged list result. Must match a curated
+          ``pyhems.CollectionBinding.result_epc`` for the same class_code.
+        max_exposed_items: Maximum number of channel entities to create,
+          independent of the MRA per-page item limit or the device's actual
+          channel count (see
+          docs/ha-0287-epc-be-implementation-report-v2.md section 3).
+        unique_id_prefix: Prefix for each channel entity's unique_id, before
+          the channel number (e.g. ``"simplex_channel"``).
+        fields: One or more fields decoded from each item (more than one for
+          object items, e.g. forward/reverse cumulative energy).
+        coefficient_epcs: Sibling EPCs (MRA ``coefficient``) item values in
+          this list depend on (e.g. 0xC2 for cumulative energy).
+        fast_poll: Whether ``result_epc`` should be polled at the
+          high-frequency cadence (instantaneous power lists), matching
+          ``PropertyRole.INSTANTANEOUS`` for scalar entities.
+    """
+
+    class_code: int
+    result_epc: int
+    max_exposed_items: int
+    unique_id_prefix: str
+    fields: tuple[CollectionFieldProjection, ...]
+    coefficient_epcs: tuple[int, ...] = ()
+    fast_poll: bool = False
+
+
+COLLECTION_SENSOR_PROJECTIONS: tuple[CollectionSensorProjection, ...] = (
+    CollectionSensorProjection(
+        class_code=CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        result_epc=EPC_SIMPLEX_INSTANTANEOUS_POWER_LIST,
+        max_exposed_items=60,
+        unique_id_prefix="simplex_channel",
+        fast_poll=True,
+        fields=(
+            CollectionFieldProjection(
+                item_field=None,
+                translation_key="simplex_instantaneous_power",
+                device_class=SensorDC.POWER,
+                state_class=SensorStateClass.MEASUREMENT,
+                unit=UnitOfPower.WATT,
+                unique_id_suffix="instantaneous_power",
+            ),
+        ),
+    ),
+    CollectionSensorProjection(
+        class_code=CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        result_epc=EPC_DUPLEX_INSTANTANEOUS_POWER_LIST,
+        max_exposed_items=60,
+        unique_id_prefix="duplex_channel",
+        fast_poll=True,
+        fields=(
+            CollectionFieldProjection(
+                item_field=None,
+                translation_key="duplex_instantaneous_power",
+                device_class=SensorDC.POWER,
+                state_class=SensorStateClass.MEASUREMENT,
+                unit=UnitOfPower.WATT,
+                unique_id_suffix="instantaneous_power",
+            ),
+        ),
+    ),
+    CollectionSensorProjection(
+        class_code=CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        result_epc=EPC_SIMPLEX_CUMULATIVE_ENERGY_LIST,
+        max_exposed_items=60,
+        unique_id_prefix="simplex_channel",
+        coefficient_epcs=(EPC_UNIT_FOR_CUMULATIVE_ELECTRIC_ENERGY,),
+        fields=(
+            CollectionFieldProjection(
+                item_field=None,
+                translation_key="cumulative_energy",
+                device_class=SensorDC.ENERGY,
+                state_class=SensorStateClass.TOTAL_INCREASING,
+                unit=UnitOfEnergy.KILO_WATT_HOUR,
+                unique_id_suffix="cumulative_energy",
+            ),
+        ),
+    ),
+    CollectionSensorProjection(
+        class_code=CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        result_epc=EPC_DUPLEX_CUMULATIVE_ENERGY_LIST,
+        max_exposed_items=30,
+        unique_id_prefix="duplex_channel",
+        coefficient_epcs=(EPC_UNIT_FOR_CUMULATIVE_ELECTRIC_ENERGY,),
+        fields=(
+            CollectionFieldProjection(
+                item_field="normalDirectionElectricEnergy",
+                translation_key="cumulative_energy_forward",
+                device_class=SensorDC.ENERGY,
+                state_class=SensorStateClass.TOTAL_INCREASING,
+                unit=UnitOfEnergy.KILO_WATT_HOUR,
+                unique_id_suffix="cumulative_energy_forward",
+            ),
+            CollectionFieldProjection(
+                item_field="reverseDirectionElectricEnergy",
+                translation_key="cumulative_energy_reverse",
+                device_class=SensorDC.ENERGY,
+                state_class=SensorStateClass.TOTAL_INCREASING,
+                unit=UnitOfEnergy.KILO_WATT_HOUR,
+                unique_id_suffix="cumulative_energy_reverse",
+            ),
+        ),
+    ),
+)
 
 
 def camel_to_snake(name: str) -> str:

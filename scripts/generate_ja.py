@@ -43,6 +43,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from custom_components.echonet_lite.const import (  # noqa: E402
+    EXCLUDED_EPCS_BY_CLASS,
     INSTALLATION_LOCATION_UNSET,
     camel_to_snake,
 )
@@ -250,8 +251,11 @@ def generate_ja(registry: DefinitionsRegistry) -> dict[str, Any]:
     """
     entity_strings: dict[str, dict[str, dict[str, Any]]] = {}
 
-    for entity_defs in registry.entities.values():
+    for class_code, entity_defs in registry.entities.items():
+        excluded = EXCLUDED_EPCS_BY_CLASS.get(class_code, frozenset())
         for entity in entity_defs:
+            if entity.epc in excluded:
+                continue
             _process_entity(entity_strings, entity)
 
     # Load static file
