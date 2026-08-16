@@ -16,6 +16,7 @@ from .entity import (
     build_platform_descriptions,
     setup_common_platform,
 )
+from .prop import EnumProp
 from .runtime import EchonetLiteConfigEntry
 
 PARALLEL_UPDATES = 1
@@ -27,7 +28,8 @@ class EchonetLiteButtonEntityDescription(
 ):
     """Entity description that also stores EPC metadata."""
 
-    press_value: bytes  # Byte value to send when button is pressed
+    prop: EnumProp
+    press_value: str
 
     @classmethod
     @override
@@ -44,11 +46,10 @@ class EchonetLiteButtonEntityDescription(
             raise ValueError(
                 f"Button entity requires enum values, but {entity_def.id} has none"
             )
-        # Use the first enum value's EDT as the press value
-        press_value = entity_def.enum_values[0].edt.to_bytes(1, "big")
         return cls(
             key=f"{entity_def.epc:02x}",
-            press_value=press_value,
+            prop=EnumProp.from_entity_def(entity_def),
+            press_value=entity_def.enum_values[0].key,
             **cls._common_kwargs(entity_def),
         )
 
@@ -86,4 +87,4 @@ class EchonetLiteButton(
     @override
     async def async_press(self) -> None:
         """Send the button press command via the pyhems runtime client."""
-        await self._async_send_property(self._epc, self.description.press_value)
+        await self._async_send_prop(self.description.prop, self.description.press_value)
