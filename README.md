@@ -36,8 +36,16 @@ Device classes fall into two categories:
 | 0x0135 | Air Cleaner | Fan + generic entities |
 | 0x026B | Electric Water Heater | Water Heater + generic entities |
 | 0x026F | Electric Lock | Lock + generic entities |
+| 0x0272 | Instantaneous Water Heater | Generic entities |
 | 0x0279 | Residential Solar Power Generation | Generic entities |
 | 0x027D | Storage Battery | Generic entities |
+| 0x027E | Electric Vehicle Charger/Discharger | Generic entities |
+| 0x0281 | Water Flow Meter | Generic entities |
+| 0x0282 | Gas Meter | Generic entities |
+| 0x0287 | Power Distribution Board Metering | Generic entities |
+| 0x0291 | Mono-Functional Lighting | Light + generic entities |
+| 0x02A5 | Multiple Input PCS | Generic entities |
+| 0x03BB | Rice Cooker | Generic entities |
 | 0x05FD | Switch (JEM-A/HA terminals) | Generic entities |
 | 0x05FF | Controller | Generic entities |
 
@@ -62,7 +70,6 @@ The following classes require **Enable experimental device classes** to be turne
 | 0x0260 | Electrically Operated Blind | Cover + generic entities |
 | 0x0263 | Electrically Operated Shutter | Cover + generic entities |
 | 0x0290 | General Lighting | Light + generic entities |
-| 0x0291 | Mono-Functional Lighting | Light + generic entities |
 
 **Via generic entities only** (50+ additional classes including sensors, meters, EV chargers, cookware, and more — see the full list in the integration options UI).
 
