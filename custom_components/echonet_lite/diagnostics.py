@@ -98,6 +98,13 @@ def _node_to_dict(node: NodeState, device_manager: DeviceManager) -> dict[str, A
         "get_epcs": _format_epcs(node.get_epcs),
         "set_epcs": _format_epcs(node.set_epcs),
         "inf_epcs": _format_epcs(node.inf_epcs),
+        # INF_REQ (0x63) subscription outcome: attempted is the candidate
+        # set (monitored & inf_epcs); confirmed is the subset acknowledged
+        # via a 0x73 response ("subscribed successfully"); failed is the
+        # subset rejected (0x53) or unanswered, which falls back to polling.
+        "attempted_inf_epcs": _format_epcs(node.attempted_inf_epcs),
+        "confirmed_inf_epcs": _format_epcs(node.confirmed_inf_epcs),
+        "failed_inf_epcs": _format_epcs(node.failed_inf_epcs),
         "poll_epcs": _format_epcs(node.poll_epcs),
         "fast_poll_epcs": _format_epcs(node.fast_poll_epcs),
         # Narrowed by disabled-entity EPC subscriptions (Step 6). May equal
