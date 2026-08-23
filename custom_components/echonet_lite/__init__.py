@@ -29,9 +29,6 @@ from .const import (
     DISCOVERY_INTERVAL,
     DOMAIN,
     EPC_INSTALLATION_LOCATION,
-    EPC_MANUFACTURER_CODE,
-    EPC_PRODUCT_CODE,
-    EPC_SERIAL_NUMBER,
     EXCLUDED_EPCS_BY_CLASS,
     RUNTIME_MONITOR_INTERVAL,
     RUNTIME_MONITOR_MAX_SILENCE,
@@ -155,9 +152,6 @@ def _build_fast_poll_epcs() -> dict[int, frozenset[int]]:
 
 _FAST_POLL_EPCS: Final[dict[int, frozenset[int]]] = _build_fast_poll_epcs()
 
-# EPCs to request during node discovery (in addition to identification and instance list)
-_DISCOVERY_EPCS: Final = [EPC_MANUFACTURER_CODE, EPC_PRODUCT_CODE, EPC_SERIAL_NUMBER]
-
 
 async def async_migrate_entry(
     hass: HomeAssistant, entry: EchonetLiteConfigEntry
@@ -202,7 +196,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: EchonetLiteConfigEntry) 
     client = HemsClient(
         interface=interface,
         poll_interval=DISCOVERY_INTERVAL,
-        extra_epcs=_DISCOVERY_EPCS,
     )
 
     # Determine which device class codes to accept

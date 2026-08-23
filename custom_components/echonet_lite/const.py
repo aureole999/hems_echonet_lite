@@ -90,9 +90,6 @@ CLASS_CODE_CONTROLLER = 0x05FF
 # Common (super class, 0x80-0x9F) EPCs.
 EPC_OPERATION_STATUS = 0x80
 EPC_INSTALLATION_LOCATION = 0x81
-EPC_MANUFACTURER_CODE = 0x8A
-EPC_PRODUCT_CODE = 0x8C
-EPC_SERIAL_NUMBER = 0x8D
 
 # Class-specific EPCs used by the climate / fan platforms.
 # 0xA0 has different semantic names per class (fan speed for HOME AC,

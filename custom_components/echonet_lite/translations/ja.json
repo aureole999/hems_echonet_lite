@@ -175,6 +175,9 @@
     "class_03b7": {
       "name": "冷凍冷蔵庫"
     },
+    "class_03b8": {
+      "name": "オーブンレンジ"
+    },
     "class_03b9": {
       "name": "クッキングヒータ"
     },
@@ -198,6 +201,12 @@
     },
     "class_0602": {
       "name": "テレビ"
+    },
+    "class_0f01": {
+      "name": "ユーザ定義デバイス (0x0F01)"
+    },
+    "class_0f02": {
+      "name": "ユーザ定義デバイス (0x0F02)"
     },
     "unknown_class": {
       "name": "ECHONET Liteデバイス {class_code}"
@@ -289,7 +298,7 @@
           "on": "フィルタ交換時期通知有"
         }
       },
-      "class_0135_epc_f1_custom_000005_01": {
+      "class_0135_epc_f1_000005_01": {
         "name": "照度",
         "state": {
           "off": "暗い",
@@ -527,6 +536,13 @@
           "on": "ドア開"
         }
       },
+      "class_03b8_epc_b0": {
+        "name": "ドア開閉状態",
+        "state": {
+          "off": "ドア閉",
+          "on": "ドア開"
+        }
+      },
       "class_03bb_epc_b0": {
         "name": "蓋開閉状態",
         "state": {
@@ -553,20 +569,6 @@
         "state": {
           "off": "クローズ",
           "on": "オープン"
-        }
-      },
-      "class_03ce_epc_d2": {
-        "name": "冷凍機内蔵型か冷凍機別置型かを示すショーケース構成情報",
-        "state": {
-          "off": "内蔵型",
-          "on": "別置型"
-        }
-      },
-      "class_03ce_epc_d4": {
-        "name": "冷蔵用途か冷凍用途かを示す庫内温度帯情報",
-        "state": {
-          "off": "冷凍",
-          "on": "冷蔵"
         }
       },
       "class_03ce_epc_e7": {
@@ -1053,6 +1055,12 @@
       "class_03b7_epc_ed": {
         "name": "切換室温度レベル設定"
       },
+      "class_03b8_epc_e4": {
+        "name": "仕上がり温度設定値"
+      },
+      "class_03b8_epc_e7": {
+        "name": "電子レンジ加熱出力設定値"
+      },
       "class_03b9_epc_e3": {
         "name": "加熱温度設定値 左コンロ設定温度"
       },
@@ -1100,6 +1108,9 @@
       },
       "class_05ff_epc_c2": {
         "name": "インデックス"
+      },
+      "class_0f02_epc_b3_000006": {
+        "name": "温度設定値"
       }
     },
     "select": {
@@ -1351,6 +1362,13 @@
           "level_6": "レベル6",
           "level_7": "レベル7",
           "level_8": "レベル8"
+        }
+      },
+      "class_0134_epc_b1": {
+        "name": "換気方式設定",
+        "state": {
+          "air_conditioning": "空調換気",
+          "blowing": "送風換気"
         }
       },
       "class_0134_epc_b2": {
@@ -1758,6 +1776,13 @@
           "undefined": "未設定"
         }
       },
+      "class_027a_epc_e0": {
+        "name": "運転モード設定",
+        "state": {
+          "cooling": "冷房",
+          "heating": "暖房"
+        }
+      },
       "class_027a_epc_e5": {
         "name": "特殊運転設定",
         "state": {
@@ -1809,6 +1834,13 @@
           "off": "タイマー切",
           "timer1": "タイマー1",
           "timer2": "タイマー2"
+        }
+      },
+      "class_027c_epc_d2": {
+        "name": "指定発電状態",
+        "state": {
+          "load_following": "負荷追従での発電",
+          "maximum_rating": "定格最大での発電"
         }
       },
       "class_027d_epc_c1": {
@@ -1966,6 +1998,13 @@
           "prioritizing_electricity_sales": "売電優先"
         }
       },
+      "class_02a7_epc_c0": {
+        "name": "制御ポイント",
+        "state": {
+          "device_point": "機器点",
+          "power_receiving_point": "受電点"
+        }
+      },
       "class_03b7_epc_a0": {
         "name": "急速冷凍動作設定",
         "state": {
@@ -1988,6 +2027,105 @@
           "disable": "製氷禁止",
           "enable": "製氷許可",
           "standby": "製氷一定時間禁止"
+        }
+      },
+      "class_03b8_epc_b2": {
+        "name": "加熱設定",
+        "state": {
+          "start_restart_heating_heating_started_restarted": "加熱開始・再開",
+          "stop_heating_heating_stopped": "加熱停止",
+          "suspend_heating_heating_suspended": "加熱一時停止"
+        }
+      },
+      "class_03b8_epc_d0": {
+        "name": "自動メニューコース設定",
+        "state": {
+          "boiling_fruit_flower_vegetables": "ゆで果花菜",
+          "boiling_leafy_vegetables": "ゆで葉菜",
+          "boiling_root_vegetables": "ゆで根菜",
+          "chawan_mushi": "茶碗蒸",
+          "chiffon_cakes": "シフォンケーキ",
+          "cookies": "クッキー",
+          "cooking_rice": "炊飯",
+          "cream_puffs": "シュー皮",
+          "defrosting_meat": "肉解凍",
+          "defrosting_sashimi": "さしみ解凍",
+          "fries": "フライ",
+          "fully_automatic": "全自動",
+          "gratins": "グラタン",
+          "hamburger_steaks": "ハンバーグ",
+          "milk": "牛乳",
+          "no_automatic_heating_cycle_specified": "未設定",
+          "reheating_boiled_rice": "ごはんあたため",
+          "reheating_cooked_dish": "おかずあたため",
+          "reheating_fries": "揚げ物再加熱",
+          "rolls": "ロールパン",
+          "sake": "お酒",
+          "sponge_cakes": "スポンジケーキ",
+          "toast": "食パン"
+        }
+      },
+      "class_03b8_epc_d1": {
+        "name": "オーブンモード設定",
+        "state": {
+          "automatic_selection_mode": "自動選択モード",
+          "circulation_oven_mode": "熱風オーブンモード",
+          "convection_oven_mode": "対流オーブンモード",
+          "hybrid_oven_mode": "複合オーブンモード",
+          "no_sub_mode_specified": "未設定"
+        }
+      },
+      "class_03b8_epc_d5": {
+        "name": "オーブン予熱設定",
+        "state": {
+          "not_specified": "未設定",
+          "with_preheating": "予熱あり",
+          "without_preheating": "予熱なし"
+        }
+      },
+      "class_03b8_epc_d6": {
+        "name": "発酵モード設定",
+        "state": {
+          "automatic_selection_mode": "自動選択モード",
+          "circulation_fermentation_mode": "熱風発酵モード",
+          "convection_fermentation_mode": "対流発酵モード",
+          "hybrid_fermentation_mode": "複合発酵モード",
+          "microwave_fermentation_mode": "電子レンジ発酵モード",
+          "no_mode_specified": "未設定"
+        }
+      },
+      "class_03b8_epc_e0": {
+        "name": "加熱モード設定",
+        "state": {
+          "defrosting": "解凍",
+          "fermenting": "発酵",
+          "grill": "グリル",
+          "microwave_heating": "電子レンジ加熱",
+          "no_mode_specified": "未設定",
+          "oven": "オーブン",
+          "steaming": "スチーム加熱",
+          "stewing": "煮込み",
+          "toaster": "トースト",
+          "two_stage_microwave_heating": "電子レンジ２段加熱"
+        }
+      },
+      "class_03b8_epc_e1": {
+        "name": "自動加熱設定",
+        "state": {
+          "automatic": "自動",
+          "manual": "マニュアル",
+          "not_specified": "未設定"
+        }
+      },
+      "class_03b8_epc_e2": {
+        "name": "自動加熱レベル設定",
+        "state": {
+          "level1": "Level 1",
+          "level2": "Level 2",
+          "level3": "Level 3",
+          "level4": "Level 4",
+          "level5": "Level 5",
+          "not_specified": "未設定"
         }
       },
       "class_03ce_epc_b0": {
@@ -2112,6 +2250,37 @@
           "washing": "洗いのみ",
           "washing_rinsing": "洗い＋全すすぎ",
           "washing_rinsing_without_final": "洗い+すすぎ (除く最終すすぎ)"
+        }
+      },
+      "class_03d4_epc_b0": {
+        "name": "運転モード設定",
+        "state": {
+          "cooling": "冷却",
+          "non_cooling": "非冷"
+        }
+      },
+      "class_0f01_epc_b0_000006": {
+        "name": "運転モード設定",
+        "state": {
+          "auto": "自動",
+          "circulation": "送風",
+          "cooling": "冷房",
+          "dehumidification": "除湿",
+          "heating": "暖房",
+          "other": "その他"
+        }
+      },
+      "class_0f01_epc_c2_000006": {
+        "name": "換気風量設定",
+        "state": {
+          "level_1": "レベル1",
+          "level_2": "レベル2",
+          "level_3": "レベル3",
+          "level_4": "レベル4",
+          "level_5": "レベル5",
+          "level_6": "レベル6",
+          "level_7": "レベル7",
+          "level_8": "レベル8"
         }
       },
       "installation_location_code": {
@@ -2280,13 +2449,13 @@
       "class_0134_epc_d5": {
         "name": "排気相対湿度計測値"
       },
-      "class_0135_epc_f1_custom_000005_03": {
+      "class_0135_epc_f1_000005_03": {
         "name": "温度"
       },
-      "class_0135_epc_f1_custom_000005_04": {
+      "class_0135_epc_f1_000005_04": {
         "name": "湿度"
       },
-      "class_0135_epc_f1_custom_000005_1c": {
+      "class_0135_epc_f1_000005_1c": {
         "name": "PM2.5"
       },
       "class_0156_epc_ae": {
@@ -2515,40 +2684,40 @@
       "class_0279_epc_e3": {
         "name": "積算売電電力量計測値"
       },
-      "class_0279_epc_f2_custom_000005_00": {
+      "class_0279_epc_f2_000005": {
         "name": "入力電圧1"
       },
-      "class_0279_epc_f2_custom_000005_02": {
+      "class_0279_epc_f2_000005_02": {
         "name": "入力電圧2"
       },
-      "class_0279_epc_f2_custom_000005_04": {
+      "class_0279_epc_f2_000005_04": {
         "name": "入力電圧3"
       },
-      "class_0279_epc_f2_custom_000005_06": {
+      "class_0279_epc_f2_000005_06": {
         "name": "入力電圧4"
       },
-      "class_0279_epc_f3_custom_000005_00": {
+      "class_0279_epc_f3_000005": {
         "name": "入力電流1"
       },
-      "class_0279_epc_f3_custom_000005_01": {
+      "class_0279_epc_f3_000005_01": {
         "name": "入力電流2"
       },
-      "class_0279_epc_f3_custom_000005_02": {
+      "class_0279_epc_f3_000005_02": {
         "name": "入力電流3"
       },
-      "class_0279_epc_f3_custom_000005_03": {
+      "class_0279_epc_f3_000005_03": {
         "name": "入力電流4"
       },
-      "class_0279_epc_f4_custom_000005_00": {
+      "class_0279_epc_f4_000005": {
         "name": "入力電力1"
       },
-      "class_0279_epc_f4_custom_000005_02": {
+      "class_0279_epc_f4_000005_02": {
         "name": "入力電力2"
       },
-      "class_0279_epc_f4_custom_000005_04": {
+      "class_0279_epc_f4_000005_04": {
         "name": "入力電力3"
       },
-      "class_0279_epc_f4_custom_000005_06": {
+      "class_0279_epc_f4_000005_06": {
         "name": "入力電力4"
       },
       "class_027a_epc_e3": {
@@ -3382,6 +3551,19 @@
       "class_03b7_epc_dc": {
         "name": "定格消費電力値"
       },
+      "class_03b8_epc_b1": {
+        "name": "加熱状態",
+        "state": {
+          "heating": "運転中",
+          "heating_suspended": "一時停止中",
+          "heating_temporarily_stopped_for_manual_cooking_action": "加熱途中報知一時停止中",
+          "initialstate": "初期状態",
+          "preheat_temperature_maintenance": "予熱完了保温中",
+          "preheating": "予熱中",
+          "reporting_completion_of_heating_cycle": "完了報知中",
+          "setting": "設定中"
+        }
+      },
       "class_03bb_epc_b1": {
         "name": "炊飯状態",
         "state": {
@@ -3403,6 +3585,13 @@
           "other": "その他"
         }
       },
+      "class_03ce_epc_d2": {
+        "name": "冷凍機内蔵型か冷凍機別置型かを示すショーケース構成情報",
+        "state": {
+          "built_in": "内蔵型",
+          "separate": "別置型"
+        }
+      },
       "class_03ce_epc_d3": {
         "name": "ショーケース形状情報",
         "state": {
@@ -3417,6 +3606,13 @@
           "reach_in": "リーチイン",
           "triple_glass": "三面ガラス式",
           "walk_in": "ウォークイン"
+        }
+      },
+      "class_03ce_epc_d4": {
+        "name": "冷蔵用途か冷凍用途かを示す庫内温度帯情報",
+        "state": {
+          "freezing": "冷凍",
+          "refrigeration": "冷蔵"
         }
       },
       "class_03ce_epc_e3": {
@@ -3499,17 +3695,23 @@
       "class_05ff_epc_cb": {
         "name": "管理対象機器登録情報更新バージョン情報"
       },
-      "class_05ff_epc_f2_custom_000005_00": {
+      "class_05ff_epc_f2_000005": {
         "name": "瞬時売電電力"
       },
-      "class_05ff_epc_f3_custom_000005_00": {
+      "class_05ff_epc_f3_000005": {
         "name": "瞬時買電電力"
       },
-      "class_05ff_epc_f4_custom_000005_00": {
+      "class_05ff_epc_f4_000005": {
         "name": "積算売電電力量"
       },
-      "class_05ff_epc_f5_custom_000005_00": {
+      "class_05ff_epc_f5_000005": {
         "name": "積算買電電力量"
+      },
+      "class_0f01_epc_be_000006": {
+        "name": "外気温度計測値"
+      },
+      "class_0f02_epc_bb_000006": {
+        "name": "室内温度計測値"
       },
       "cumulative_energy": {
         "name": "チャンネル {channel} 積算電力量"
@@ -3575,13 +3777,6 @@
         "state": {
           "off": "非AUTO",
           "on": "AUTO"
-        }
-      },
-      "class_0134_epc_b1": {
-        "name": "換気方式設定",
-        "state": {
-          "off": "空調換気",
-          "on": "送風換気"
         }
       },
       "class_0134_epc_bf": {
@@ -3829,13 +4024,6 @@
           "on": "予約入"
         }
       },
-      "class_027a_epc_e0": {
-        "name": "運転モード設定",
-        "state": {
-          "off": "冷房",
-          "on": "暖房"
-        }
-      },
       "class_027b_epc_90": {
         "name": "ON タイマ予約設定",
         "state": {
@@ -3855,13 +4043,6 @@
         "state": {
           "off": "発電停止",
           "on": "発電動作"
-        }
-      },
-      "class_027c_epc_d2": {
-        "name": "指定発電状態",
-        "state": {
-          "off": "負荷追従での発電",
-          "on": "定格最大での発電"
         }
       },
       "class_027d_epc_cc": {
@@ -3925,13 +4106,6 @@
         "state": {
           "off": "設定しない",
           "on": "設定する"
-        }
-      },
-      "class_02a7_epc_c0": {
-        "name": "制御ポイント",
-        "state": {
-          "off": "受電点",
-          "on": "機器点"
         }
       },
       "class_02a7_epc_c8": {
@@ -4046,13 +4220,6 @@
           "on": "ロック"
         }
       },
-      "class_03d4_epc_b0": {
-        "name": "運転モード設定",
-        "state": {
-          "off": "非冷",
-          "on": "冷却"
-        }
-      },
       "class_03d4_epc_e2": {
         "name": "コンプレッサ動作状態",
         "state": {
@@ -4065,6 +4232,20 @@
         "state": {
           "off": "非表示",
           "on": "表示"
+        }
+      },
+      "class_0f01_epc_c0_000006": {
+        "name": "換気モード設定",
+        "state": {
+          "off": "換気ON",
+          "on": "換気OFF"
+        }
+      },
+      "class_0f02_epc_8f_000006": {
+        "name": "キープ運転設定",
+        "state": {
+          "off": "キープON",
+          "on": "キープOFF"
         }
       }
     },

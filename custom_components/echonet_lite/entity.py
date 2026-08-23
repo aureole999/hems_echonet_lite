@@ -63,8 +63,8 @@ def infer_platform(entity: EntityDefinition) -> Platform | None:
     Decision matrix:
         | Data shape    | readable + writable | readable only | write-only         |
         |---------------|---------------------|---------------|-----------         |
-        | 2 enum values | switch              | binary_sensor | None (skip)        |
-        | 3+ enum vals  | select              | sensor (ENUM) | None (skip)        |
+        | true/false enum | switch            | binary_sensor | None (skip)        |
+        | other enum values | select          | sensor (ENUM) | None (skip)        |
         | 1 enum value  | None (skip)         | None (skip)   | button             |
         | numeric       | number              | sensor        | None (skip)        |
         | numericValue  | None (skip)         | None (skip)   | None (skip)        |
@@ -82,7 +82,7 @@ def infer_platform(entity: EntityDefinition) -> Platform | None:
             if len(entity.enum_values) == 1:
                 # Single enum value on readable property is skipped
                 return None
-            if len(entity.enum_values) == 2:
+            if entity.is_binary:
                 return Platform.SWITCH if writable else Platform.BINARY_SENSOR
             return Platform.SELECT if writable else Platform.SENSOR
         if entity.format is None:
