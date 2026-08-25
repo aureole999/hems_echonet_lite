@@ -32,46 +32,31 @@ Device classes fall into two categories:
 
 | Class Code | Device | HA Platform |
 |------------|--------|-------------|
-| 0x0130 | Home Air Conditioner | Climate + generic entities |
-| 0x0135 | Air Cleaner | Fan + generic entities |
-| 0x026B | Electric Water Heater | Water Heater + generic entities |
-| 0x026F | Electric Lock | Lock + generic entities |
-| 0x0272 | Instantaneous Water Heater | Generic entities |
-| 0x0279 | Residential Solar Power Generation | Generic entities |
-| 0x027D | Storage Battery | Generic entities |
-| 0x027E | Electric Vehicle Charger/Discharger | Generic entities |
-| 0x0281 | Water Flow Meter | Generic entities |
-| 0x0282 | Gas Meter | Generic entities |
-| 0x0287 | Power Distribution Board Metering | Generic entities |
-| 0x0291 | Mono-Functional Lighting | Light + generic entities |
-| 0x02A5 | Multiple Input PCS | Generic entities |
-| 0x03BB | Rice Cooker | Generic entities |
-| 0x05FD | Switch (JEM-A/HA terminals) | Generic entities |
-| 0x05FF | Controller | Generic entities |
-
-Verified hardware:
-- **Home Air Conditioner**: Mitsubishi Electric Kirigamine Z series
-- **Air Cleaner**: Sharp KI-SX70-W
-- **電気錠**: Yamato Denki ECHONET Lite Adapter
-- **Residential Solar Power Generation / Storage Battery**: Sharp SUNVISTA
-- **Switch**: Panasonic HF-JA1
-- **Controller**: Sharp JH-RVB1, JH-RWL8
+| 0x0130 | Home Air Conditioner | Climate |
+| 0x0135 | Air Cleaner | Fan |
+| 0x0263 | Electrically operated rain sliding door/shutter | Cover |
+| 0x026B | Electric Water Heater | Water Heater |
+| 0x026F | Electric Lock | Lock |
+| 0x0272 | Instantaneous Water Heater |
+| 0x0279 | Residential Solar Power Generation |
+| 0x027B | Floor heater |
+| 0x027D | Storage Battery |
+| 0x027E | Electric Vehicle Charger/Discharger |
+| 0x0280 | Watt-hour meter |
+| 0x0281 | Water Flow Meter |
+| 0x0282 | Gas Meter |
+| 0x0287 | Power Distribution Board Metering |
+| 0x0291 | Mono-Functional Lighting | Light |
+| 0x02A5 | Multiple Input PCS |
+| 0x02A6 | Hybrid water heater |
+| 0x03B8 | Oven |
+| 0x03BB | Rice Cooker |
+| 0x05FD | Switch (JEM-A/HA terminals) |
+| 0x05FF | Controller |
 
 ### Experimental Device Classes
 
-The following classes require **Enable experimental device classes** to be turned on in the integration options.
-
-**With dedicated HA platform entities:**
-
-| Class Code | Device | HA Platform |
-|------------|--------|-------------|
-| 0x0133 | Ventilation Fan | Fan + generic entities |
-| 0x0134 | Air Conditioner Ventilation Fan | Fan + generic entities |
-| 0x0260 | Electrically Operated Blind | Cover + generic entities |
-| 0x0263 | Electrically Operated Shutter | Cover + generic entities |
-| 0x0290 | General Lighting | Light + generic entities |
-
-**Via generic entities only** (50+ additional classes including sensors, meters, EV chargers, cookware, and more — see the full list in the integration options UI).
+The other classes require **Enable experimental device classes** to be turned on in the integration options.
 
 ## Supported Functionality
 
