@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any, override
 
-from pyhems import NodeState
+from pyhems import DeviceClass, NodeState
 
 from homeassistant.components.climate import (
     ATTR_TEMPERATURE,
@@ -24,7 +24,6 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    CLASS_CODE_HOME_AIR_CONDITIONER as CC_AC,
     DEDICATED_PLATFORM_EPCS,
     DOMAIN,
     EPC_FAN_SPEED,
@@ -144,16 +143,32 @@ class EchonetLiteClimateEntityDescription(ClimateEntityDescription):
 
 
 _DESCRIPTIONS: dict[int, EchonetLiteClimateEntityDescription] = {
-    CC_AC: EchonetLiteClimateEntityDescription(
+    DeviceClass.HOME_AIR_CONDITIONER: EchonetLiteClimateEntityDescription(
         key="climate",
-        op_status=BinaryProp.from_registry(CC_AC, EPC_OPERATION_STATUS),
-        op_mode_prop=EnumProp.from_registry(CC_AC, EPC_OPERATION_MODE),
-        special_state_prop=EnumProp.from_registry(CC_AC, EPC_SPECIAL_STATE),
-        target_temp_prop=NumericProp.from_registry(CC_AC, EPC_TARGET_TEMPERATURE),
-        room_temp_prop=NumericProp.from_registry(CC_AC, EPC_ROOM_TEMPERATURE),
-        humidity_prop=NumericProp.from_registry(CC_AC, EPC_ROOM_HUMIDITY),
-        fan_mode_prop=EnumProp.from_registry(CC_AC, EPC_FAN_SPEED),
-        swing_mode_prop=EnumProp.from_registry(CC_AC, EPC_SWING_AIR_FLOW),
+        op_status=BinaryProp.from_registry(
+            DeviceClass.HOME_AIR_CONDITIONER, EPC_OPERATION_STATUS
+        ),
+        op_mode_prop=EnumProp.from_registry(
+            DeviceClass.HOME_AIR_CONDITIONER, EPC_OPERATION_MODE
+        ),
+        special_state_prop=EnumProp.from_registry(
+            DeviceClass.HOME_AIR_CONDITIONER, EPC_SPECIAL_STATE
+        ),
+        target_temp_prop=NumericProp.from_registry(
+            DeviceClass.HOME_AIR_CONDITIONER, EPC_TARGET_TEMPERATURE
+        ),
+        room_temp_prop=NumericProp.from_registry(
+            DeviceClass.HOME_AIR_CONDITIONER, EPC_ROOM_TEMPERATURE
+        ),
+        humidity_prop=NumericProp.from_registry(
+            DeviceClass.HOME_AIR_CONDITIONER, EPC_ROOM_HUMIDITY
+        ),
+        fan_mode_prop=EnumProp.from_registry(
+            DeviceClass.HOME_AIR_CONDITIONER, EPC_FAN_SPEED
+        ),
+        swing_mode_prop=EnumProp.from_registry(
+            DeviceClass.HOME_AIR_CONDITIONER, EPC_SWING_AIR_FLOW
+        ),
     )
 }
 

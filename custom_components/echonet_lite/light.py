@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Final, override
 
-from pyhems import NodeState
+from pyhems import DeviceClass, NodeState
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -19,8 +19,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    CLASS_CODE_GENERAL_LIGHTING as CC_GENERAL,
-    CLASS_CODE_MONO_FUNCTIONAL_LIGHTING as CC_MONO,
     DEDICATED_PLATFORM_EPCS,
     EPC_LIGHT_COLOR,
     EPC_LIGHT_LEVEL,
@@ -113,10 +111,15 @@ def _create_light_description(
 
 
 _DESCRIPTIONS: dict[int, EchonetLiteLightEntityDescription] = {
-    CC_GENERAL: _create_light_description(
-        CC_GENERAL, "general_lighting", build_color=True, build_mode=True
+    DeviceClass.GENERAL_LIGHTING: _create_light_description(
+        DeviceClass.GENERAL_LIGHTING,
+        "general_lighting",
+        build_color=True,
+        build_mode=True,
     ),
-    CC_MONO: _create_light_description(CC_MONO, "mono_functional_lighting"),
+    DeviceClass.MONO_FUNCTIONAL_LIGHTING: _create_light_description(
+        DeviceClass.MONO_FUNCTIONAL_LIGHTING, "mono_functional_lighting"
+    ),
 }
 
 

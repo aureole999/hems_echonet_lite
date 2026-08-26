@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, override
 
-from pyhems import NodeState
+from pyhems import DeviceClass, NodeState
 
 from homeassistant.components.cover import (
     ATTR_POSITION,
@@ -18,8 +18,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    CLASS_CODE_ELECTRICALLY_OPERATED_BLIND as CC_BLIND,
-    CLASS_CODE_ELECTRICALLY_OPERATED_SHUTTER as CC_SHUTTER,
     DEDICATED_PLATFORM_EPCS,
     EPC_COVER_ANGLE,
     EPC_COVER_OPEN_CLOSE,
@@ -60,8 +58,12 @@ def _create_cover_description(
 
 
 _DESCRIPTIONS: dict[int, EchonetLiteCoverEntityDescription] = {
-    CC_BLIND: _create_cover_description(CC_BLIND, CoverDeviceClass.BLIND),
-    CC_SHUTTER: _create_cover_description(CC_SHUTTER, CoverDeviceClass.SHUTTER),
+    DeviceClass.ELECTRIC_BLIND_SHADE: _create_cover_description(
+        DeviceClass.ELECTRIC_BLIND_SHADE, CoverDeviceClass.BLIND
+    ),
+    DeviceClass.ELECTRIC_RAIN_DOOR: _create_cover_description(
+        DeviceClass.ELECTRIC_RAIN_DOOR, CoverDeviceClass.SHUTTER
+    ),
 }
 
 

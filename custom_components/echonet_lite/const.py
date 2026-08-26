@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 import re
 
-from pyhems import EntityDefinition, PropertyRole
+from pyhems import DeviceClass, EntityDefinition, PropertyRole
 
 from homeassistant.components.number import NumberDeviceClass as NumberDC
 from homeassistant.components.sensor import (
@@ -54,39 +54,6 @@ RUNTIME_MONITOR_INTERVAL = timedelta(minutes=1)
 # than firing on a single transient gap.
 RUNTIME_MONITOR_MAX_SILENCE = timedelta(minutes=5)
 DISCOVERY_INTERVAL = 60.0 * 60.0  # 1 hour
-
-# ============================================================================
-# ECHONET Lite class codes used by this integration
-# ============================================================================
-# Names and values come from the ECHONET Lite specification (Machine Readable
-# Appendix). pyhems exposes the same metadata at runtime via
-# ``DefinitionsRegistry``; these literals are kept here so that imports stay
-# pure (no I/O at import time) and so the integration owns its own naming.
-CLASS_CODE_HOME_AIR_CONDITIONER = 0x0130
-CLASS_CODE_VENTILATION_FAN = 0x0133
-CLASS_CODE_AIR_CONDITIONER_VENTILATION_FAN = 0x0134
-CLASS_CODE_AIR_CLEANER = 0x0135
-CLASS_CODE_ELECTRICALLY_OPERATED_BLIND = 0x0260
-CLASS_CODE_ELECTRICALLY_OPERATED_SHUTTER = 0x0263
-CLASS_CODE_ELECTRIC_WATER_HEATER = 0x026B
-CLASS_CODE_ELECTRIC_LOCK = 0x026F
-CLASS_CODE_INSTANTANEOUS_WATER_HEATER = 0x0272
-CLASS_CODE_HOUSEHOLD_SOLAR_POWER_GENERATION = 0x0279
-CLASS_CODE_FLOOR_HEATER = 0x027B
-CLASS_CODE_STORAGE_BATTERY = 0x027D
-CLASS_CODE_ELECTRIC_VEHICLE_CHARGER_DISCHARGER = 0x027E
-CLASS_CODE_WATT_HOUR_METER = 0x0280
-CLASS_CODE_WATER_FLOW_METER = 0x0281
-CLASS_CODE_GAS_METER = 0x0282
-CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING = 0x0287
-CLASS_CODE_GENERAL_LIGHTING = 0x0290
-CLASS_CODE_MONO_FUNCTIONAL_LIGHTING = 0x0291
-CLASS_CODE_MULTIPLE_INPUT_PCS = 0x02A5
-CLASS_CODE_HYBRID_WATER_HEATER = 0x02A6
-CLASS_CODE_OVEN = 0x03B8
-CLASS_CODE_RICE_COOKER = 0x03BB
-CLASS_CODE_SWITCH = 0x05FD  # Switch (supporting JEM-A/HA terminals)
-CLASS_CODE_CONTROLLER = 0x05FF
 
 # ============================================================================
 # ECHONET Lite property codes (EPCs) used by this integration
@@ -140,27 +107,27 @@ EPC_UNIT_FOR_CUMULATIVE_ELECTRIC_ENERGY = 0xC2
 # Other device classes are considered experimental.
 STABLE_CLASS_CODES: frozenset[int] = frozenset(
     {
-        CLASS_CODE_HOME_AIR_CONDITIONER,
-        CLASS_CODE_AIR_CLEANER,
-        CLASS_CODE_ELECTRICALLY_OPERATED_SHUTTER,
-        CLASS_CODE_ELECTRIC_WATER_HEATER,
-        CLASS_CODE_ELECTRIC_LOCK,
-        CLASS_CODE_INSTANTANEOUS_WATER_HEATER,
-        CLASS_CODE_HOUSEHOLD_SOLAR_POWER_GENERATION,
-        CLASS_CODE_FLOOR_HEATER,
-        CLASS_CODE_STORAGE_BATTERY,
-        CLASS_CODE_ELECTRIC_VEHICLE_CHARGER_DISCHARGER,
-        CLASS_CODE_WATT_HOUR_METER,
-        CLASS_CODE_WATER_FLOW_METER,
-        CLASS_CODE_GAS_METER,
-        CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
-        CLASS_CODE_MONO_FUNCTIONAL_LIGHTING,
-        CLASS_CODE_MULTIPLE_INPUT_PCS,
-        CLASS_CODE_HYBRID_WATER_HEATER,
-        CLASS_CODE_OVEN,
-        CLASS_CODE_RICE_COOKER,
-        CLASS_CODE_SWITCH,
-        CLASS_CODE_CONTROLLER,
+        DeviceClass.HOME_AIR_CONDITIONER,
+        DeviceClass.AIR_CLEANER,
+        DeviceClass.ELECTRIC_RAIN_DOOR,
+        DeviceClass.ELECTRIC_WATER_HEATER,
+        DeviceClass.ELECTRIC_LOCK,
+        DeviceClass.INSTANTANEOUS_WATER_HEATER,
+        DeviceClass.PV_POWER_GENERATION,
+        DeviceClass.FLOOR_HEATER,
+        DeviceClass.STORAGE_BATTERY,
+        DeviceClass.EV_CHARGER_DISCHARGER,
+        DeviceClass.WATT_HOUR_METER,
+        DeviceClass.WATER_FLOW_METER,
+        DeviceClass.GAS_METER,
+        DeviceClass.POWER_DISTRIBUTION_BOARD_METERING,
+        DeviceClass.MONO_FUNCTIONAL_LIGHTING,
+        DeviceClass.MULTIPLE_INPUT_PCS,
+        DeviceClass.HYBRID_WATER_HEATER,
+        DeviceClass.COMBINATION_MICROWAVE_OVEN,
+        DeviceClass.RICE_COOKER,
+        DeviceClass.SWITCH,
+        DeviceClass.CONTROLLER,
     }
 )
 
@@ -168,7 +135,7 @@ STABLE_CLASS_CODES: frozenset[int] = frozenset(
 # - Excluded from other platforms (sensor/binary_sensor/select/switch) to avoid duplicates
 # - Used for polling/notification to keep entity state up-to-date
 DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
-    CLASS_CODE_HOME_AIR_CONDITIONER: frozenset(
+    DeviceClass.HOME_AIR_CONDITIONER: frozenset(
         {
             EPC_OPERATION_STATUS,
             EPC_FAN_SPEED,
@@ -178,39 +145,39 @@ DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
             EPC_TARGET_TEMPERATURE,
         }
     ),
-    CLASS_CODE_VENTILATION_FAN: frozenset(
+    DeviceClass.VENTILATION_FAN: frozenset(
         {
             EPC_OPERATION_STATUS,
             EPC_AIR_FLOW_LEVEL,
         }
     ),
-    CLASS_CODE_AIR_CONDITIONER_VENTILATION_FAN: frozenset(
+    DeviceClass.AIR_CONDITIONER_VENTILATION_FAN: frozenset(
         {
             EPC_OPERATION_STATUS,
             EPC_AIR_FLOW_LEVEL,
         }
     ),
-    CLASS_CODE_AIR_CLEANER: frozenset(
+    DeviceClass.AIR_CLEANER: frozenset(
         {
             EPC_OPERATION_STATUS,
             EPC_AIR_FLOW_LEVEL,
         }
     ),
-    CLASS_CODE_ELECTRIC_WATER_HEATER: frozenset(
+    DeviceClass.ELECTRIC_WATER_HEATER: frozenset(
         {
             EPC_OPERATION_STATUS,
             EPC_OPERATION_MODE,
             EPC_TARGET_TEMPERATURE,
         }
     ),
-    CLASS_CODE_ELECTRIC_LOCK: frozenset(
+    DeviceClass.ELECTRIC_LOCK: frozenset(
         {
             EPC_LOCK_SETTING_1,
             EPC_LOCK_SETTING_2,
             EPC_LOCK_ALARM_STATUS,
         }
     ),
-    CLASS_CODE_ELECTRICALLY_OPERATED_BLIND: frozenset(
+    DeviceClass.ELECTRIC_BLIND_SHADE: frozenset(
         {
             EPC_COVER_OPEN_CLOSE,
             EPC_COVER_POSITION,
@@ -218,7 +185,7 @@ DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
             EPC_COVER_OPEN_CLOSED_STATUS,
         }
     ),
-    CLASS_CODE_ELECTRICALLY_OPERATED_SHUTTER: frozenset(
+    DeviceClass.ELECTRIC_RAIN_DOOR: frozenset(
         {
             EPC_COVER_OPEN_CLOSE,
             EPC_COVER_POSITION,
@@ -226,13 +193,13 @@ DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
             EPC_COVER_OPEN_CLOSED_STATUS,
         }
     ),
-    CLASS_CODE_MONO_FUNCTIONAL_LIGHTING: frozenset(
+    DeviceClass.MONO_FUNCTIONAL_LIGHTING: frozenset(
         {
             EPC_OPERATION_STATUS,
             EPC_LIGHT_LEVEL,
         }
     ),
-    CLASS_CODE_GENERAL_LIGHTING: frozenset(
+    DeviceClass.GENERAL_LIGHTING: frozenset(
         {
             EPC_OPERATION_STATUS,
             EPC_LIGHT_LEVEL,
@@ -254,7 +221,7 @@ DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
 # 96 redundant entities and risk oversized Get requests being split across
 # frames; see docs/ha-0287-epc-be-implementation-report-v2.md section 6.2.
 EXCLUDED_EPCS_BY_CLASS: dict[int, frozenset[int]] = {
-    CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING: frozenset(range(0xD0, 0xF0)),
+    DeviceClass.POWER_DISTRIBUTION_BOARD_METERING: frozenset(range(0xD0, 0xF0)),
 }
 
 
@@ -334,7 +301,7 @@ class CollectionSensorProjection:
 
 COLLECTION_SENSOR_PROJECTIONS: tuple[CollectionSensorProjection, ...] = (
     CollectionSensorProjection(
-        class_code=CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        class_code=DeviceClass.POWER_DISTRIBUTION_BOARD_METERING,
         result_epc=EPC_SIMPLEX_INSTANTANEOUS_POWER_LIST,
         max_exposed_items=60,
         unique_id_prefix="simplex_channel",
@@ -351,7 +318,7 @@ COLLECTION_SENSOR_PROJECTIONS: tuple[CollectionSensorProjection, ...] = (
         ),
     ),
     CollectionSensorProjection(
-        class_code=CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        class_code=DeviceClass.POWER_DISTRIBUTION_BOARD_METERING,
         result_epc=EPC_DUPLEX_INSTANTANEOUS_POWER_LIST,
         max_exposed_items=60,
         unique_id_prefix="duplex_channel",
@@ -368,7 +335,7 @@ COLLECTION_SENSOR_PROJECTIONS: tuple[CollectionSensorProjection, ...] = (
         ),
     ),
     CollectionSensorProjection(
-        class_code=CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        class_code=DeviceClass.POWER_DISTRIBUTION_BOARD_METERING,
         result_epc=EPC_SIMPLEX_CUMULATIVE_ENERGY_LIST,
         max_exposed_items=60,
         unique_id_prefix="simplex_channel",
@@ -385,7 +352,7 @@ COLLECTION_SENSOR_PROJECTIONS: tuple[CollectionSensorProjection, ...] = (
         ),
     ),
     CollectionSensorProjection(
-        class_code=CLASS_CODE_POWER_DISTRIBUTION_BOARD_METERING,
+        class_code=DeviceClass.POWER_DISTRIBUTION_BOARD_METERING,
         result_epc=EPC_DUPLEX_CUMULATIVE_ENERGY_LIST,
         max_exposed_items=30,
         unique_id_prefix="duplex_channel",
