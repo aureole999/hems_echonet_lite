@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any, override
 
-from pyhems import NodeState, Property
+from pyhems import DeviceClass, NodeState, Property
 
 from homeassistant.components.fan import (
     FanEntity,
@@ -21,9 +21,6 @@ from homeassistant.util.percentage import (
 )
 
 from .const import (
-    CLASS_CODE_AIR_CLEANER as CC_AIR_CLEANER,
-    CLASS_CODE_AIR_CONDITIONER_VENTILATION_FAN as CC_AIR_CONDITIONER_VENTILATION_FAN,
-    CLASS_CODE_VENTILATION_FAN as CC_VENTILATION_FAN,
     DEDICATED_PLATFORM_EPCS,
     DOMAIN,
     EPC_AIR_FLOW_LEVEL,
@@ -77,11 +74,13 @@ def _create_fan_description(
 
 
 _DESCRIPTIONS: dict[int, EchonetLiteFanEntityDescription] = {
-    CC_VENTILATION_FAN: _create_fan_description(CC_VENTILATION_FAN),
-    CC_AIR_CONDITIONER_VENTILATION_FAN: _create_fan_description(
-        CC_AIR_CONDITIONER_VENTILATION_FAN
+    DeviceClass.VENTILATION_FAN: _create_fan_description(DeviceClass.VENTILATION_FAN),
+    DeviceClass.AIR_CONDITIONER_VENTILATION_FAN: _create_fan_description(
+        DeviceClass.AIR_CONDITIONER_VENTILATION_FAN
     ),
-    CC_AIR_CLEANER: _create_fan_description(CC_AIR_CLEANER, "air_cleaner"),
+    DeviceClass.AIR_CLEANER: _create_fan_description(
+        DeviceClass.AIR_CLEANER, "air_cleaner"
+    ),
 }
 
 

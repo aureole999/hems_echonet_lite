@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, override
 
-from pyhems import NodeState
+from pyhems import DeviceClass, NodeState
 
 from homeassistant.components.water_heater import (
     STATE_OFF,
@@ -22,7 +22,6 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    CLASS_CODE_ELECTRIC_WATER_HEATER as CC_WATER_HEATER,
     DEDICATED_PLATFORM_EPCS,
     DOMAIN,
     EPC_MEASURED_WATER_TEMPERATURE,
@@ -57,16 +56,20 @@ class EchonetLiteWaterHeaterEntityDescription(WaterHeaterEntityDescription):
 
 
 _DESCRIPTIONS: dict[int, EchonetLiteWaterHeaterEntityDescription] = {
-    CC_WATER_HEATER: EchonetLiteWaterHeaterEntityDescription(
+    DeviceClass.ELECTRIC_WATER_HEATER: EchonetLiteWaterHeaterEntityDescription(
         key="water_heater",
         target_temp_prop=NumericProp.from_registry(
-            CC_WATER_HEATER, EPC_TARGET_TEMPERATURE
+            DeviceClass.ELECTRIC_WATER_HEATER, EPC_TARGET_TEMPERATURE
         ),
         current_temp_prop=NumericProp.from_registry(
-            CC_WATER_HEATER, EPC_MEASURED_WATER_TEMPERATURE
+            DeviceClass.ELECTRIC_WATER_HEATER, EPC_MEASURED_WATER_TEMPERATURE
         ),
-        op_status=BinaryProp.from_registry(CC_WATER_HEATER, EPC_OPERATION_STATUS),
-        op_mode=EnumProp.from_registry(CC_WATER_HEATER, EPC_OPERATION_MODE),
+        op_status=BinaryProp.from_registry(
+            DeviceClass.ELECTRIC_WATER_HEATER, EPC_OPERATION_STATUS
+        ),
+        op_mode=EnumProp.from_registry(
+            DeviceClass.ELECTRIC_WATER_HEATER, EPC_OPERATION_MODE
+        ),
     )
 }
 
