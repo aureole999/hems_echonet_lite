@@ -116,6 +116,7 @@ def _node_to_dict(node: NodeState, device_manager: DeviceManager) -> dict[str, A
         "effective_fast_poll_epcs": _format_epcs(
             device_manager.effective_fast_poll_epcs(node.device_key)
         ),
+        "observed_batch_capacity": node.observed_batch_capacity,
         "properties": _format_properties(node.properties),
     }
     if collection := _collection_pages(node):
@@ -140,7 +141,6 @@ def _add_poller_stats(
             None if stats.latency_ewma is None else round(stats.latency_ewma, 3)
         ),
         "consecutive_failures": stats.consecutive_failures,
-        "observed_batch_capacity": stats.observed_batch_capacity,
     }
 
 
