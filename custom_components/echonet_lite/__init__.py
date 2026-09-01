@@ -26,7 +26,6 @@ from .const import (
     DEFAULT_FAST_POLL_INTERVAL,
     DEFAULT_INTERFACE,
     DEFAULT_POLL_INTERVAL,
-    DISCOVERY_INTERVAL,
     DOMAIN,
     EPC_INSTALLATION_LOCATION,
     EXCLUDED_EPCS_BY_CLASS,
@@ -195,7 +194,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: EchonetLiteConfigEntry) 
 
     client = HemsClient(
         interface=interface,
-        poll_interval=DISCOVERY_INTERVAL,
     )
 
     # Determine which device class codes to accept

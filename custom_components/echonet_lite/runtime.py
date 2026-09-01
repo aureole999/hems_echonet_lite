@@ -29,6 +29,7 @@ from .const import DOMAIN, ISSUE_RUNTIME_CLIENT_ERROR, ISSUE_RUNTIME_INACTIVE
 from .coordinator import EchonetLiteCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+_INITIAL_DISCOVERY_TIMEOUT = 30.0
 
 
 @dataclass(slots=True)
@@ -185,6 +186,8 @@ class RuntimeController:
         self.health = health
         self._restart_lock = asyncio.Lock()
         self._event_queue: asyncio.Queue[RuntimeEvent] = asyncio.Queue()
+        self._initial_discovery_complete = asyncio.Event()
+        self._periodic_discovery_started = False
         # Populated by ``async_start``; safe to access directly from
         # ``async_setup_entry`` because callers only read these after
         # ``async_start`` has completed without raising.
@@ -215,16 +218,42 @@ class RuntimeController:
         # still trips the threshold.
         self.issue_monitor.start()
 
-        self.discovery_task = self._entry.async_create_background_task(
-            self._hass,
-            self.client.probe_nodes(),
-            name="echonet_lite_discovery",
-        )
         self.event_consumer_task = self._entry.async_create_background_task(
             self._hass,
             self._consume_runtime_events(),
             name="echonet_lite_event_consumer",
         )
+        self.discovery_task = self._entry.async_create_background_task(
+            self._hass,
+            self._run_initial_discovery(),
+            name="echonet_lite_discovery",
+        )
+
+    async def _run_initial_discovery(self) -> None:
+        """Run the initial probe and start recurring discovery."""
+        if not await self.client.probe_initial_nodes():
+            _LOGGER.warning("Initial ECHONET Lite node discovery could not be sent")
+            self._start_periodic_discovery()
+            return
+
+        try:
+            await asyncio.wait_for(
+                self._initial_discovery_complete.wait(),
+                timeout=_INITIAL_DISCOVERY_TIMEOUT,
+            )
+        except TimeoutError:
+            _LOGGER.debug(
+                "No ECHONET Lite node registration received during initial discovery"
+            )
+
+        self._start_periodic_discovery()
+
+    def _start_periodic_discovery(self) -> None:
+        """Start recurring discovery once for the current client lifecycle."""
+        if self._periodic_discovery_started:
+            return
+        self._periodic_discovery_started = True
+        self.client.start_periodic_discovery()
 
     @callback
     def _handle_runtime_event(self, event: RuntimeEvent) -> None:
@@ -258,6 +287,8 @@ class RuntimeController:
                     )
                     await self.coordinator.async_process_instance_list_event(event)
                     self.issue_monitor.record_activity(event.received_at)
+                    self._initial_discovery_complete.set()
+                    self._start_periodic_discovery()
                 elif isinstance(event, HemsErrorEvent):
                     self.health.last_client_error = str(event.error)
                     self.health.last_client_error_at = event.received_at
@@ -295,6 +326,7 @@ class RuntimeController:
                 RuntimeError,
             ) as err:  # pragma: no cover - best effort cleanup
                 _LOGGER.debug("Failed to stop ECHONET Lite runtime client: %s", err)
+            self._periodic_discovery_started = False
             try:
                 await self.client.start()
             except OSError as err:
@@ -303,6 +335,10 @@ class RuntimeController:
                 self.health.last_client_error_at = time.monotonic()
                 self.issue_monitor.record_client_error(str(err))
                 return
+            if self._initial_discovery_complete.is_set():
+                self._start_periodic_discovery()
+            else:
+                await self.client.probe_initial_nodes()
             self.health.last_restart_at = time.monotonic()
             self.issue_monitor.clear_client_error()
             # Treat a successful restart as activity so the inactivity issue

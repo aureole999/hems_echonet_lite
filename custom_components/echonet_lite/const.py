@@ -53,7 +53,6 @@ RUNTIME_MONITOR_INTERVAL = timedelta(minutes=1)
 # ratio so the inactivity issue still trips after several missed polls rather
 # than firing on a single transient gap.
 RUNTIME_MONITOR_MAX_SILENCE = timedelta(minutes=5)
-DISCOVERY_INTERVAL = 60.0 * 60.0  # 1 hour
 
 # ============================================================================
 # ECHONET Lite property codes (EPCs) used by this integration
