@@ -1,5 +1,6 @@
 """Select platform for the HEMS Echonet Lite integration."""
 
+import asyncio
 from dataclasses import dataclass
 from typing import override
 
@@ -37,7 +38,9 @@ from .entity import (
 from .prop import EnumProp
 from .runtime import EchonetLiteConfigEntry
 
-PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 0
+
+_INSTALLATION_LOCATION_LOCK = asyncio.Lock()
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -210,18 +213,19 @@ class InstallationLocationCodeSelect(EchonetLiteEntity, SelectEntity):
     @override
     async def async_select_option(self, option: str) -> None:
         """Send updated location code while preserving the current NNN."""
-        new_llll = _LOCATION_KEY_TO_CODE[option]
-        if new_llll == 0:
-            # "unset" selected — write 0x00; forcing NNN=0 avoids generating
-            # the prohibited 0x01-0x07 range (17-byte format indicators).
-            await self._async_send_property(EPC_INSTALLATION_LOCATION, b"\x00")
-            return
-        fields = _decode_location_fields(self._node)
-        nnn = fields[1] if fields is not None else 0
-        edt = InstallationLocationCodec().encode(
-            InstallationLocation.from_code(new_llll, nnn)
-        )
-        await self._async_send_property(EPC_INSTALLATION_LOCATION, edt)
+        async with _INSTALLATION_LOCATION_LOCK:
+            new_llll = _LOCATION_KEY_TO_CODE[option]
+            if new_llll == 0:
+                # "unset" selected — write 0x00; forcing NNN=0 avoids generating
+                # the prohibited 0x01-0x07 range (17-byte format indicators).
+                await self._async_send_property(EPC_INSTALLATION_LOCATION, b"\x00")
+                return
+            fields = _decode_location_fields(self._node)
+            nnn = fields[1] if fields is not None else 0
+            edt = InstallationLocationCodec().encode(
+                InstallationLocation.from_code(new_llll, nnn)
+            )
+            await self._async_send_property(EPC_INSTALLATION_LOCATION, edt)
 
 
 class InstallationLocationNumberSelect(EchonetLiteEntity, SelectEntity):
@@ -268,15 +272,16 @@ class InstallationLocationNumberSelect(EchonetLiteEntity, SelectEntity):
     @override
     async def async_select_option(self, option: str) -> None:
         """Send updated location number while preserving the current LLLL."""
-        fields = _decode_location_fields(self._node)
-        if fields is None or fields[0] == 0:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key="installation_location_number_unset",
+        async with _INSTALLATION_LOCATION_LOCK:
+            fields = _decode_location_fields(self._node)
+            if fields is None or fields[0] == 0:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="installation_location_number_unset",
+                )
+            llll = fields[0]
+            new_nnn = int(option)
+            edt = InstallationLocationCodec().encode(
+                InstallationLocation.from_code(llll, new_nnn)
             )
-        llll = fields[0]
-        new_nnn = int(option)
-        edt = InstallationLocationCodec().encode(
-            InstallationLocation.from_code(llll, new_nnn)
-        )
-        await self._async_send_property(EPC_INSTALLATION_LOCATION, edt)
+            await self._async_send_property(EPC_INSTALLATION_LOCATION, edt)
