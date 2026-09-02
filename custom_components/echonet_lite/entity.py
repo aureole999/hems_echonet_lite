@@ -27,7 +27,7 @@ from .const import (
 )
 from .coordinator import EchonetLiteCoordinator
 from .prop import Prop
-from .runtime import EchonetLiteConfigEntry, EchonetLiteRuntimeData
+from .runtime import EchonetLiteConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -101,10 +101,10 @@ def infer_platform(entity: EntityDefinition) -> Platform | None:
 
 
 def _get_or_build_device_info(
-    runtime_data: EchonetLiteRuntimeData, node: NodeState
+    coordinator: EchonetLiteCoordinator, node: NodeState
 ) -> DeviceInfo:
     """Return the cached ``DeviceInfo`` for ``node``, building it on first use."""
-    cache = runtime_data.device_info_cache
+    cache = coordinator.device_info_cache
     if (cached := cache.get(node.device_key)) is not None:
         return cached
 
@@ -168,9 +168,7 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
 
         super().__init__(coordinator)
         self._node = node
-        self._attr_device_info = _get_or_build_device_info(
-            coordinator.config_entry.runtime_data, node
-        )
+        self._attr_device_info = _get_or_build_device_info(coordinator, node)
         # EPCs this entity is interested in, used to (un)subscribe with
         # DeviceManager so that a disabled entity's EPCs stop being polled.
         # Subclasses that manage more than one EPC (dedicated-platform
@@ -185,8 +183,7 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
     async def async_added_to_hass(self) -> None:
         """Subscribe this entity's EPCs for polling once added to hass."""
         await super().async_added_to_hass()
-        runtime = self.coordinator.config_entry.runtime_data
-        self._unsub_epc_subscription = runtime.device_manager.subscribe_epcs(
+        self._unsub_epc_subscription = self.coordinator.device_manager.subscribe_epcs(
             self._node.device_key, self._subscribed_epcs
         )
 
@@ -249,8 +246,8 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
                 translation_key="epc_not_writable",
                 translation_placeholders={"epc_list": hex_list},
             )
-        runtime = self.coordinator.config_entry.runtime_data
-        sent = await runtime.controller.client.set_properties(
+        controller = self.coordinator.config_entry.runtime_data
+        sent = await controller.client.set_properties(
             node_id=node.node_id,
             deoj=node.eoj,
             properties=properties,
@@ -263,7 +260,7 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
 
         # After a Set operation, schedule an earlier poll so the UI reflects the
         # updated device state sooner.
-        runtime.property_poller.schedule_immediate_poll(node.device_key)
+        controller.property_poller.schedule_immediate_poll(node.device_key)
 
     async def _async_send_prop[ValueT](self, prop: Prop[ValueT], value: ValueT) -> None:
         """Encode value via prop and send as a SetC request for this EPC.
@@ -604,7 +601,7 @@ def setup_echonet_lite_device_platform(
         async_add_entities: Callback to add entities
         entity_factory: Callable building entities for a given node.
     """
-    coordinator = entry.runtime_data.controller.coordinator
+    coordinator = entry.runtime_data.coordinator
     known_device_keys: set[str] = set()
 
     @callback
@@ -629,9 +626,7 @@ def setup_echonet_lite_device_platform(
             if not device_entities or not _has_enabled_entity_candidate(
                 coordinator.hass, platform_domain, device_entities
             ):
-                coordinator.config_entry.runtime_data.device_manager.subscribe_epcs(
-                    device_key, frozenset()
-                )
+                coordinator.device_manager.subscribe_epcs(device_key, frozenset())
             new_entities.extend(device_entities)
         if new_entities:
             async_add_entities(new_entities)

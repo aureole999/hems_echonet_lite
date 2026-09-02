@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Callable
+import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
@@ -9,7 +10,6 @@ import time
 from typing import Any
 
 from pyhems import (
-    DeviceManager,
     HemsClient,
     HemsErrorEvent,
     HemsFrameEvent,
@@ -22,7 +22,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import DOMAIN, ISSUE_RUNTIME_CLIENT_ERROR, ISSUE_RUNTIME_INACTIVE
@@ -34,12 +33,21 @@ _INITIAL_DISCOVERY_TIMEOUT = 30.0
 
 @dataclass(slots=True)
 class RuntimeHealth:
-    """Health metadata tracked for the runtime client."""
+    """Health metadata tracked for the runtime client.
+
+    The single canonical store for runtime health telemetry.
+    ``EchonetLiteCoordinator`` delegates its ``last_runtime_activity_at``
+    property to this object rather than keeping its own copy, so entities
+    (which only have direct access to the coordinator) and diagnostics
+    (which reaches this object via ``RuntimeController.health``) always see
+    the same value.
+    """
 
     last_client_error: str | None = None
     last_client_error_at: float | None = None
     last_restart_at: float | None = None
     restart_attempts: int = 0
+    last_runtime_activity_at: float | None = None
 
 
 class RuntimeIssueMonitor:
@@ -160,9 +168,18 @@ class RuntimeIssueMonitor:
 class RuntimeController:
     """Own the pyhems runtime lifecycle for a config entry.
 
-    Encapsulates the restart lock, event queue, event consumer task and
-    discovery task so that ``async_setup_entry`` can stay focused on
-    dependency wiring.
+    Stored directly as ``entry.runtime_data`` (see ``EchonetLiteConfigEntry``
+    below): it already exposes every object other modules need
+    (``client``, ``coordinator``, ``property_poller``, ``issue_monitor``,
+    ``health``), so a separate wrapper dataclass would only add a level of
+    indirection without owning any state of its own.
+
+    Encapsulates the restart lock, event queue, event consumer task,
+    discovery task and the adaptive property poller so that
+    ``async_setup_entry``/``async_unload_entry`` can stay focused on
+    dependency wiring: :meth:`async_start` and :meth:`async_stop` are the
+    single symmetric entry points for starting and tearing down everything
+    this class owns.
     """
 
     def __init__(
@@ -171,8 +188,8 @@ class RuntimeController:
         entry: EchonetLiteConfigEntry,
         *,
         client: HemsClient,
-        device_manager: DeviceManager,
         coordinator: EchonetLiteCoordinator,
+        property_poller: PropertyPoller,
         issue_monitor: RuntimeIssueMonitor,
         health: RuntimeHealth,
     ) -> None:
@@ -180,8 +197,8 @@ class RuntimeController:
         self._hass = hass
         self._entry = entry
         self.client = client
-        self._device_manager = device_manager
         self.coordinator = coordinator
+        self.property_poller = property_poller
         self.issue_monitor = issue_monitor
         self.health = health
         self._restart_lock = asyncio.Lock()
@@ -228,6 +245,26 @@ class RuntimeController:
             self._run_initial_discovery(),
             name="echonet_lite_discovery",
         )
+        self.property_poller.start()
+
+    async def async_stop(self) -> None:
+        """Undo everything started by :meth:`async_start`.
+
+        Mirrors ``async_setup_entry``/``async_unload_entry``'s previous
+        manual teardown sequence so ``async_unload_entry`` can call this as
+        a single step instead of reaching into the controller's tasks and
+        sub-objects directly.
+        """
+        self.unsubscribe_runtime()
+        self.issue_monitor.stop()
+        self.property_poller.stop()
+        self.discovery_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await self.discovery_task
+        self.event_consumer_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await self.event_consumer_task
+        await self.client.stop()
 
     async def _run_initial_discovery(self) -> None:
         """Run the initial probe and start recurring discovery."""
@@ -353,20 +390,9 @@ class RuntimeController:
             # A shallow copy is sufficient: ``NodeState`` values are owned
             # by ``DeviceManager`` and only mutated from the single event
             # consumer task, so concurrent readers see a consistent snapshot.
-            self.coordinator.async_set_updated_data(dict(self._device_manager.data))
+            self.coordinator.async_set_updated_data(
+                dict(self.coordinator.device_manager.data)
+            )
 
 
-@dataclass(slots=True)
-class EchonetLiteRuntimeData:
-    """Runtime data stored on the config entry."""
-
-    controller: RuntimeController
-    property_poller: PropertyPoller
-    device_manager: DeviceManager
-    # Per-node ``DeviceInfo`` cache keyed by ``node.device_key``. Built once
-    # on first entity instantiation for a node and shared by every entity
-    # platform bound to that node.
-    device_info_cache: dict[str, DeviceInfo]
-
-
-EchonetLiteConfigEntry = ConfigEntry[EchonetLiteRuntimeData]
+EchonetLiteConfigEntry = ConfigEntry[RuntimeController]

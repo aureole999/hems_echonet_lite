@@ -1,7 +1,5 @@
 """The HEMS Echonet Lite integration."""
 
-import asyncio
-from contextlib import suppress
 import logging
 from typing import Final
 
@@ -36,7 +34,6 @@ from .const import (
 from .coordinator import EchonetLiteCoordinator
 from .runtime import (
     EchonetLiteConfigEntry,
-    EchonetLiteRuntimeData,
     RuntimeController,
     RuntimeHealth,
     RuntimeIssueMonitor,
@@ -207,13 +204,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: EchonetLiteConfigEntry) 
         class_code_filter=class_code_filter,
         fast_epcs=_FAST_POLL_EPCS,
     )
+
+    runtime_health = RuntimeHealth()
+
     coordinator = EchonetLiteCoordinator(
         hass,
         config_entry=entry,
         device_manager=device_manager,
+        health=runtime_health,
     )
-
-    runtime_health = RuntimeHealth()
 
     issue_monitor = RuntimeIssueMonitor(
         hass,
@@ -222,31 +221,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: EchonetLiteConfigEntry) 
         interval=RUNTIME_MONITOR_INTERVAL,
     )
 
+    property_poller = PropertyPoller(
+        device_manager,
+        poll_interval=DEFAULT_POLL_INTERVAL,
+        fast_poll_interval=DEFAULT_FAST_POLL_INTERVAL,
+    )
+
     controller = RuntimeController(
         hass,
         entry,
         client=client,
-        device_manager=device_manager,
         coordinator=coordinator,
+        property_poller=property_poller,
         issue_monitor=issue_monitor,
         health=runtime_health,
     )
 
     await controller.async_start()
 
-    property_poller = PropertyPoller(
-        device_manager,
-        poll_interval=DEFAULT_POLL_INTERVAL,
-        fast_poll_interval=DEFAULT_FAST_POLL_INTERVAL,
-    )
-    property_poller.start()
-
-    entry.runtime_data = EchonetLiteRuntimeData(
-        controller=controller,
-        property_poller=property_poller,
-        device_manager=device_manager,
-        device_info_cache={},
-    )
+    entry.runtime_data = controller
 
     # Reload entry when options change
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -272,7 +265,7 @@ async def async_remove_config_entry_device(
     Removal is permitted only when the device is no longer actively
     discovered on the local network (i.e. not present in coordinator data).
     """
-    coordinator = config_entry.runtime_data.controller.coordinator
+    coordinator = config_entry.runtime_data.coordinator
     return not device_entry.identifiers.intersection(
         (DOMAIN, device_key) for device_key in coordinator.data
     )
@@ -287,15 +280,6 @@ async def async_unload_entry(
 
     runtime = entry.runtime_data
     if runtime:
-        runtime.controller.unsubscribe_runtime()
-        runtime.controller.issue_monitor.stop()
-        runtime.property_poller.stop()
-        runtime.controller.discovery_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await runtime.controller.discovery_task
-        runtime.controller.event_consumer_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await runtime.controller.event_consumer_task
-        await runtime.controller.client.stop()
+        await runtime.async_stop()
 
     return True
