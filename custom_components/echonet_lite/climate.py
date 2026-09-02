@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any, override
 
-from pyhems import DeviceClass, NodeState
+from pyhems import NodeState
 
 from homeassistant.components.climate import (
     ATTR_TEMPERATURE,
@@ -39,6 +39,7 @@ from .const import (
 from .coordinator import EchonetLiteCoordinator
 from .entity import EchonetLiteEntity, setup_dedicated_platform
 from .prop import BinaryProp, EnumProp, NumericProp
+from .pyhems_compat import DeviceClass
 from .quirks import QUIRKS, ClimateQuirk
 from .runtime import EchonetLiteConfigEntry
 

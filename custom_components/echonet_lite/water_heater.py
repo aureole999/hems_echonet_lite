@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, override
 
-from pyhems import BinaryCodec, DeviceClass, NodeState
+from pyhems import BinaryCodec, NodeState
 
 from homeassistant.components.water_heater import (
     STATE_OFF,
@@ -37,6 +37,7 @@ from .entity import (
     setup_echonet_lite_device_platform,
 )
 from .prop import BinaryProp, EnumProp, NumericProp
+from .pyhems_compat import DeviceClass
 from .quirks import QUIRKS, WaterHeaterQuirk
 from .runtime import EchonetLiteConfigEntry
 

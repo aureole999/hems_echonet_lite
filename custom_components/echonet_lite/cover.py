@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, override
 
-from pyhems import DeviceClass, NodeState
+from pyhems import NodeState
 
 from homeassistant.components.cover import (
     ATTR_POSITION,
@@ -27,6 +27,7 @@ from .const import (
 from .coordinator import EchonetLiteCoordinator
 from .entity import EchonetLiteEntity, setup_dedicated_platform
 from .prop import EnumProp, NumericProp
+from .pyhems_compat import DeviceClass
 from .runtime import EchonetLiteConfigEntry
 
 PARALLEL_UPDATES = 0

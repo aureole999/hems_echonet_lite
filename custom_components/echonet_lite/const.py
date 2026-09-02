@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 import re
 
-from pyhems import DeviceClass, EntityDefinition, PropertyRole
+from pyhems import EntityDefinition, PropertyRole
 
 from homeassistant.components.number import NumberDeviceClass as NumberDC
 from homeassistant.components.sensor import (
@@ -31,6 +31,7 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
 )
 
+from .pyhems_compat import DeviceClass
 from .quirks import QUIRKS
 
 DOMAIN = "echonet_lite"

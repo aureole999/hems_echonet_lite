@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any, override
 
-from pyhems import DeviceClass, NodeState, Property
+from pyhems import NodeState, Property
 
 from homeassistant.components.fan import (
     FanEntity,
@@ -29,6 +29,7 @@ from .const import (
 from .coordinator import EchonetLiteCoordinator
 from .entity import EchonetLiteEntity, setup_dedicated_platform
 from .prop import BinaryProp, EnumProp
+from .pyhems_compat import DeviceClass
 from .runtime import EchonetLiteConfigEntry
 
 _LOGGER = logging.getLogger(__name__)

@@ -13,6 +13,7 @@ from pyhems import get_codec
 
 
 ROOT = Path(__file__).resolve().parents[1]
+COMPAT_PATH = ROOT / "custom_components" / "echonet_lite" / "pyhems_compat.py"
 REGISTRY_PATH = ROOT / "custom_components" / "echonet_lite" / "quirks" / "registry.py"
 TRANSLATION_PATHS = (
     ROOT / "custom_components" / "echonet_lite" / "strings.json",
@@ -21,13 +22,11 @@ TRANSLATION_PATHS = (
 )
 
 
-def _load_registry_module() -> ModuleType:
-    """Load the standalone registry without running the integration package."""
-    spec = importlib.util.spec_from_file_location(
-        "echonet_quirk_registry", REGISTRY_PATH
-    )
+def _load_module(name: str, path: Path) -> ModuleType:
+    """Load a standalone module without running the integration package."""
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load {REGISTRY_PATH}")
+        raise RuntimeError(f"Cannot load {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -44,7 +43,14 @@ def _translation_keys(data: dict) -> set[str]:
 
 def main() -> None:
     """Validate schema, translations, and captured real-device decode fixtures."""
-    registry = _load_registry_module().QUIRKS
+    device_class = _load_module("echonet_pyhems_compat", COMPAT_PATH).DeviceClass
+    registry = _load_module("echonet_quirk_registry", REGISTRY_PATH).QUIRKS
+    unknown_class_codes = {
+        int(class_code) for class_code in device_class if class_code not in registry.entities
+    }
+    if unknown_class_codes:
+        codes = ", ".join(f"0x{code:04X}" for code in sorted(unknown_class_codes))
+        raise ValueError(f"Compatibility enum contains unknown class codes: {codes}")
     required_translation_keys: set[str] = set()
     for profile in registry.profiles:
         required_translation_keys.update(
