@@ -152,6 +152,20 @@ ECHONET Lite 仕様の範囲を超えて、特定のメーカー向けにプロ�
 | 積算売電電力量 | Wh | 0xF4 |
 | 積算買電電力量 | Wh | 0xF5 |
 
+### このフォークのローカルデバイス Quirk
+
+家庭内機器固有の拡張は
+[`custom_components/echonet_lite/quirks/devices.json`](custom_components/echonet_lite/quirks/devices.json)
+に分離しています。pyhems の定義を優先し、不足する EPC だけをローカル定義で補完するため、
+将来 pyhems が同じ EPC を正式対応した場合は原則として上流定義へ自動的に移行します。
+
+現在、Panasonic Ene-Farm `FC-70JR13T`、Panasonic 瞬間式給湯器、
+Panasonic ユーザー定義床暖房 (0x0F70)、および Toshiba エアコンの拡張を収録しています。
+F9 と F0 は意味を推測せず、観察用の raw 診断センサーとして公開します。
+
+定義を変更した後は、Home Assistant を再起動する前に
+`python scripts/validate_quirks.py` を実行してください。
+
 ## データ更新
 
 インテグレーションはポーリングとイベント駆動更新の両方を使用します。

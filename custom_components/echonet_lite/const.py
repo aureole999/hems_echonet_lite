@@ -31,6 +31,8 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
 )
 
+from .quirks import QUIRKS
+
 DOMAIN = "echonet_lite"
 ATTR_EPC = "epc"
 CONF_INTERFACE = "interface"
@@ -60,6 +62,7 @@ RUNTIME_MONITOR_MAX_SILENCE = timedelta(minutes=5)
 # Common (super class, 0x80-0x9F) EPCs.
 EPC_OPERATION_STATUS = 0x80
 EPC_INSTALLATION_LOCATION = 0x81
+EPC_POWER_SAVING = 0x8F
 
 # Class-specific EPCs used by the climate / fan platforms.
 # 0xA0 has different semantic names per class (fan speed for HOME AC,
@@ -71,6 +74,7 @@ EPC_SWING_AIR_FLOW = 0xA3
 EPC_SPECIAL_STATE = 0xAA
 EPC_OPERATION_MODE = 0xB0
 EPC_TARGET_TEMPERATURE = 0xB3
+EPC_TARGET_HUMIDITY = 0xB4
 EPC_ROOM_HUMIDITY = 0xBA
 EPC_ROOM_TEMPERATURE = 0xBB
 EPC_MEASURED_WATER_TEMPERATURE = 0xC1
@@ -104,30 +108,33 @@ EPC_UNIT_FOR_CUMULATIVE_ELECTRIC_ENERGY = 0xC2
 # Stable (non-experimental) device class codes
 # These device classes have been verified with real hardware.
 # Other device classes are considered experimental.
-STABLE_CLASS_CODES: frozenset[int] = frozenset(
-    {
-        DeviceClass.HOME_AIR_CONDITIONER,
-        DeviceClass.AIR_CLEANER,
-        DeviceClass.ELECTRIC_RAIN_DOOR,
-        DeviceClass.ELECTRIC_WATER_HEATER,
-        DeviceClass.ELECTRIC_LOCK,
-        DeviceClass.INSTANTANEOUS_WATER_HEATER,
-        DeviceClass.PV_POWER_GENERATION,
-        DeviceClass.FLOOR_HEATER,
-        DeviceClass.STORAGE_BATTERY,
-        DeviceClass.EV_CHARGER_DISCHARGER,
-        DeviceClass.WATT_HOUR_METER,
-        DeviceClass.WATER_FLOW_METER,
-        DeviceClass.GAS_METER,
-        DeviceClass.POWER_DISTRIBUTION_BOARD_METERING,
-        DeviceClass.MONO_FUNCTIONAL_LIGHTING,
-        DeviceClass.MULTIPLE_INPUT_PCS,
-        DeviceClass.HYBRID_WATER_HEATER,
-        DeviceClass.COMBINATION_MICROWAVE_OVEN,
-        DeviceClass.RICE_COOKER,
-        DeviceClass.SWITCH,
-        DeviceClass.CONTROLLER,
-    }
+STABLE_CLASS_CODES: frozenset[int] = (
+    frozenset(
+        {
+            DeviceClass.HOME_AIR_CONDITIONER,
+            DeviceClass.AIR_CLEANER,
+            DeviceClass.ELECTRIC_RAIN_DOOR,
+            DeviceClass.ELECTRIC_WATER_HEATER,
+            DeviceClass.ELECTRIC_LOCK,
+            DeviceClass.INSTANTANEOUS_WATER_HEATER,
+            DeviceClass.PV_POWER_GENERATION,
+            DeviceClass.FLOOR_HEATER,
+            DeviceClass.STORAGE_BATTERY,
+            DeviceClass.EV_CHARGER_DISCHARGER,
+            DeviceClass.WATT_HOUR_METER,
+            DeviceClass.WATER_FLOW_METER,
+            DeviceClass.GAS_METER,
+            DeviceClass.POWER_DISTRIBUTION_BOARD_METERING,
+            DeviceClass.MONO_FUNCTIONAL_LIGHTING,
+            DeviceClass.MULTIPLE_INPUT_PCS,
+            DeviceClass.HYBRID_WATER_HEATER,
+            DeviceClass.COMBINATION_MICROWAVE_OVEN,
+            DeviceClass.RICE_COOKER,
+            DeviceClass.SWITCH,
+            DeviceClass.CONTROLLER,
+        }
+    )
+    | QUIRKS.verified_class_codes
 )
 
 # EPCs managed by dedicated platform entities (climate, fan)

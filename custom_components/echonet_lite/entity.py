@@ -6,7 +6,7 @@ import logging
 import time
 from typing import Self, override
 
-from pyhems import REGISTRY, EntityDefinition, NodeState, Property
+from pyhems import EntityDefinition, NodeState, Property
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -27,6 +27,7 @@ from .const import (
 )
 from .coordinator import EchonetLiteCoordinator
 from .prop import Prop
+from .quirks import QUIRKS
 from .runtime import EchonetLiteConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -130,6 +131,9 @@ def _get_or_build_device_info(
     if node.class_name_en is not None:
         translation_key = f"class_{node.eoj.class_code:04x}"
         translation_placeholders: dict[str, str] | None = None
+    elif (quirk_translation_key := QUIRKS.device_translation_key(node)) is not None:
+        translation_key = quirk_translation_key
+        translation_placeholders = None
     else:
         translation_key = "unknown_class"
         translation_placeholders = {
@@ -314,6 +318,11 @@ class EchonetLiteEntityDescription(EntityDescription):
         # (write-only button entities are only in set_epcs)
         if self.epc not in node.get_epcs and self.epc not in node.set_epcs:
             return False
+        entity_id = self.translation_key
+        if entity_id is not None and not QUIRKS.entity_matches(entity_id, node):
+            return False
+        if QUIRKS.suppresses_generic_entity(node, entity_id, self.epc):
+            return False
         if self.manufacturer_code is not None:
             return node.manufacturer_code == self.manufacturer_code
         return True
@@ -413,8 +422,10 @@ class EchonetLiteDescribedEntity[DescriptionT: EchonetLiteEntityDescription](
         # Coefficient EPCs (e.g. EPC 0xC2) are never exposed as their own
         # entity, so this entity must subscribe to them directly or they
         # would never actually be polled; see coefficient_epcs' docstring.
-        self._subscribed_epcs = frozenset({description.epc}) | frozenset(
-            description.coefficient_epcs
+        self._subscribed_epcs = (
+            frozenset({description.epc})
+            | frozenset(description.coefficient_epcs)
+            | QUIRKS.dependencies_for(node, description.epc)
         )
 
     @property
@@ -447,7 +458,7 @@ def build_platform_descriptions[DescriptionT: EchonetLiteEntityDescription](
         Dict mapping class_code → list of entity descriptions for that platform.
     """
     descriptions: dict[int, list[DescriptionT]] = {}
-    for class_code, entity_defs in REGISTRY.entities.items():
+    for class_code, entity_defs in QUIRKS.entities.items():
         excluded = DEDICATED_PLATFORM_EPCS.get(
             class_code, frozenset()
         ) | EXCLUDED_EPCS_BY_CLASS.get(class_code, frozenset())

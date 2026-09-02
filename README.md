@@ -152,6 +152,30 @@ Sharp home energy controllers expose grid buy/sell data via manufacturer-specifi
 | Cumulative Electric Energy Sold | Wh | 0xF4 |
 | Cumulative Electric Energy Bought | Wh | 0xF5 |
 
+### Local device quirks in this fork
+
+This fork keeps household-specific extensions in
+[`custom_components/echonet_lite/quirks/devices.json`](custom_components/echonet_lite/quirks/devices.json).
+The upstream pyhems registry remains authoritative: local definitions fill gaps
+by default and automatically yield when a future pyhems release defines the
+same EPC. Behavioral adaptations are selected by class code, manufacturer, and
+optionally product code.
+
+Currently included profiles:
+
+- Panasonic Ene-Farm `FC-70JR13T` (0x027C): F2, F3, F4, F6, F7 sensors and
+  diagnostic raw F9 observation;
+- Panasonic instantaneous water heater (0x0272): bath temperature, bath-auto
+  control via E3, and diagnostic raw F0 observation;
+- Panasonic user-defined floor heater (0x0F70): power with a configurable
+  settling delay and read-only heating level;
+- Toshiba home air conditioner (0x0130): fan labels, target humidity,
+  Home/Away power-saving presets, and invalid outdoor-temperature suppression.
+
+See the [quirk schema notes](custom_components/echonet_lite/quirks/README.md).
+After editing the definitions, run `python scripts/validate_quirks.py` before
+restarting Home Assistant.
+
 ## Data Updates
 
 The integration uses both polling and event-driven updates:

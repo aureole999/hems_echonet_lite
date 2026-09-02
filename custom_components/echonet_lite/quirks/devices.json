@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "id": "panasonic_enefarm_fc_70jr13t",
+      "match": {
+        "class_code": "0x027C",
+        "manufacturer_code": "0x00000B",
+        "product_codes": ["FC-70JR13T"]
+      },
+      "verified": true,
+      "entities": [
+        {
+          "id": "quirk_panasonic_enefarm_f2",
+          "epc": "0xF2",
+          "type": "numeric",
+          "format": "uint16",
+          "unit": "L",
+          "minimum": 0,
+          "maximum": 65533,
+          "scale": 1,
+          "get": "optional",
+          "set": "notApplicable",
+          "name_en": "Hot water consumption in tank today",
+          "name_ja": "本日のタンク給湯使用量",
+          "state_class": "total_increasing"
+        },
+        {
+          "id": "quirk_panasonic_enefarm_f3",
+          "epc": "0xF3",
+          "type": "numeric",
+          "format": "uint16",
+          "unit": "L",
+          "minimum": 0,
+          "maximum": 65533,
+          "scale": 1,
+          "get": "optional",
+          "set": "notApplicable",
+          "name_en": "Hot water consumption by combustion today",
+          "name_ja": "本日の燃焼給湯使用量",
+          "state_class": "total_increasing"
+        },
+        {
+          "id": "quirk_panasonic_enefarm_f4",
+          "epc": "0xF4",
+          "type": "numeric",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 253,
+          "get": "optional",
+          "set": "notApplicable",
+          "name_en": "Hot water level in tank",
+          "name_ja": "タンク残湯レベル"
+        },
+        {
+          "id": "quirk_panasonic_enefarm_f6",
+          "epc": "0xF6",
+          "type": "numeric",
+          "format": "uint32",
+          "unit": "L",
+          "minimum": 0,
+          "maximum": 4294967293,
+          "scale": 0.01,
+          "get": "optional",
+          "set": "notApplicable",
+          "name_en": "Cumulative hot water consumption in tank",
+          "name_ja": "タンク積算給湯使用量"
+        },
+        {
+          "id": "quirk_panasonic_enefarm_f7",
+          "epc": "0xF7",
+          "type": "numeric",
+          "format": "uint32",
+          "unit": "m3",
+          "minimum": 0,
+          "maximum": 4294967293,
+          "scale": 0.001,
+          "get": "optional",
+          "set": "notApplicable",
+          "name_en": "Cumulative other gas consumption",
+          "name_ja": "その他積算ガス使用量"
+        },
+        {
+          "id": "quirk_panasonic_enefarm_f9_raw",
+          "epc": "0xF9",
+          "type": "raw",
+          "expected_length": 1,
+          "name_en": "Unknown property F9",
+          "name_ja": "未解析プロパティ F9"
+        }
+      ]
+    },
+    {
+      "id": "panasonic_instantaneous_water_heater",
+      "match": {
+        "class_code": "0x0272",
+        "manufacturer_code": "0x00000B"
+      },
+      "verified": true,
+      "entities": [
+        {
+          "id": "quirk_panasonic_bath_temperature",
+          "epc": "0xE1",
+          "type": "numeric",
+          "format": "uint8",
+          "unit": "Celsius",
+          "minimum": 0,
+          "maximum": 100,
+          "get": "optional",
+          "set": "notApplicable",
+          "name_en": "Bath temperature setting",
+          "name_ja": "ふろ温度設定",
+          "replace_upstream": true
+        },
+        {
+          "id": "quirk_panasonic_water_heater_f0_raw",
+          "epc": "0xF0",
+          "type": "raw",
+          "expected_length": 1,
+          "name_en": "Unknown property F0",
+          "name_ja": "未解析プロパティ F0"
+        }
+      ],
+      "behaviors": {
+        "claimed_epcs": ["0xE3"],
+        "water_heater": {
+          "translation_key": "panasonic_bath_water_heater",
+          "operation_epc": "0xE3",
+          "operation_on_edt": "0x41",
+          "operation_off_edt": "0x42",
+          "operation_on_key": "bath_auto",
+          "temperature_epc": "0xE1"
+        }
+      }
+    },
+    {
+      "id": "panasonic_floor_heater_0f70",
+      "match": {
+        "class_code": "0x0F70",
+        "manufacturer_code": "0x00000B"
+      },
+      "verified": true,
+      "device_translation_key": "quirk_panasonic_floor_heater",
+      "entities": [
+        {
+          "id": "quirk_panasonic_floor_power",
+          "epc": "0x80",
+          "type": "enum",
+          "get": "required",
+          "set": "optional",
+          "name_en": "Operation status",
+          "name_ja": "動作状態",
+          "settle_seconds": 20,
+          "values": [
+            {"edt": "0x30", "key": "true", "name_en": "ON", "name_ja": "入"},
+            {"edt": "0x31", "key": "false", "name_en": "OFF", "name_ja": "切"}
+          ]
+        },
+        {
+          "id": "quirk_panasonic_floor_heating_level",
+          "epc": "0xE1",
+          "type": "enum",
+          "get": "required",
+          "set": "notApplicable",
+          "name_en": "Heating level",
+          "name_ja": "暖房レベル",
+          "values": [
+            {"edt": "0x31", "key": "level_1", "name_en": "Level 1", "name_ja": "レベル1"},
+            {"edt": "0x32", "key": "level_2", "name_en": "Level 2", "name_ja": "レベル2"},
+            {"edt": "0x33", "key": "level_3", "name_en": "Level 3", "name_ja": "レベル3"},
+            {"edt": "0x34", "key": "level_4", "name_en": "Level 4", "name_ja": "レベル4"},
+            {"edt": "0x35", "key": "level_5", "name_en": "Level 5", "name_ja": "レベル5"},
+            {"edt": "0x36", "key": "level_6", "name_en": "Level 6", "name_ja": "レベル6"},
+            {"edt": "0x37", "key": "level_7", "name_en": "Level 7", "name_ja": "レベル7"},
+            {"edt": "0x38", "key": "level_8", "name_en": "Level 8", "name_ja": "レベル8"},
+            {"edt": "0x39", "key": "level_9", "name_en": "Level 9", "name_ja": "レベル9"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "toshiba_home_air_conditioner",
+      "match": {
+        "class_code": "0x0130",
+        "manufacturer_code": "0x000069"
+      },
+      "verified": true,
+      "behaviors": {
+        "claimed_epcs": ["0xB4", "0x8F"],
+        "suppress_values": [
+          {
+            "epc": "0xBE",
+            "dependencies": ["0x80", "0xB0"],
+            "when_any": [
+              {"epc": "0x80", "equals_hex": "31"},
+              {"epc": "0xB0", "equals_hex": "45"}
+            ]
+          }
+        ],
+        "climate": {
+          "target_humidity_epc": "0xB4",
+          "power_saving_preset_epc": "0x8F",
+          "fan_mode_labels": [
+            {"key": "auto", "label": "auto"},
+            {"key": "level_1", "label": "silent"},
+            {"key": "level_2", "label": "low"},
+            {"key": "level_3", "label": "medium low"},
+            {"key": "level_4", "label": "medium"},
+            {"key": "level_5", "label": "medium high"},
+            {"key": "level_6", "label": "high"},
+            {"key": "level_7", "label": "powerful"},
+            {"key": "level_8", "label": "level 8"}
+          ]
+        }
+      }
+    }
+  ]
+}

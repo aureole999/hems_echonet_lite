@@ -4,7 +4,6 @@ import logging
 from typing import Final
 
 from pyhems import (
-    REGISTRY,
     DeviceManager,
     HemsClient,
     PropertyPoller,
@@ -32,6 +31,7 @@ from .const import (
     STABLE_CLASS_CODES,
 )
 from .coordinator import EchonetLiteCoordinator
+from .quirks import QUIRKS
 from .runtime import (
     EchonetLiteConfigEntry,
     RuntimeController,
@@ -88,8 +88,10 @@ def _collection_projection_epcs(class_code: int) -> frozenset[int]:
 def _build_monitored_epcs() -> dict[int, frozenset[int]]:
     result: dict[int, frozenset[int]] = {
         class_code: frozenset(entity_def.epc for entity_def in entity_defs)
-        for class_code, entity_defs in REGISTRY.entities.items()
+        for class_code, entity_defs in QUIRKS.entities.items()
     }
+    for class_code, epcs in QUIRKS.monitored_epcs.items():
+        result[class_code] = result.get(class_code, frozenset()) | epcs
     for class_code, epcs in DEDICATED_PLATFORM_EPCS.items():
         result[class_code] = result.get(class_code, frozenset()) | epcs
     for class_code in list(result):
@@ -124,7 +126,7 @@ _MONITORED_EPCS: Final[dict[int, frozenset[int]]] = _build_monitored_epcs()
 # no scalar EntityDefinition/PropertyRole to derive a role from.
 def _build_fast_poll_epcs() -> dict[int, frozenset[int]]:
     result: dict[int, frozenset[int]] = {}
-    for class_code, entity_defs in REGISTRY.entities.items():
+    for class_code, entity_defs in QUIRKS.entities.items():
         candidates = frozenset(
             entity_def.epc
             for entity_def in entity_defs

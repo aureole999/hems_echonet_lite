@@ -208,6 +208,9 @@
     "class_0f02": {
       "name": "ユーザ定義デバイス (0x0F02)"
     },
+    "quirk_panasonic_floor_heater": {
+      "name": "床暖房"
+    },
     "unknown_class": {
       "name": "ECHONET Liteデバイス {class_code}"
     }
@@ -3713,6 +3716,44 @@
       "class_0f02_epc_bb_000006": {
         "name": "室内温度計測値"
       },
+      "quirk_panasonic_bath_temperature": {
+        "name": "ふろ温度設定"
+      },
+      "quirk_panasonic_enefarm_f2": {
+        "name": "本日のタンク給湯使用量"
+      },
+      "quirk_panasonic_enefarm_f3": {
+        "name": "本日の燃焼給湯使用量"
+      },
+      "quirk_panasonic_enefarm_f4": {
+        "name": "タンク残湯レベル"
+      },
+      "quirk_panasonic_enefarm_f6": {
+        "name": "タンク積算給湯使用量"
+      },
+      "quirk_panasonic_enefarm_f7": {
+        "name": "その他積算ガス使用量"
+      },
+      "quirk_panasonic_enefarm_f9_raw": {
+        "name": "未解析プロパティ F9"
+      },
+      "quirk_panasonic_floor_heating_level": {
+        "name": "暖房レベル",
+        "state": {
+          "level_1": "レベル1",
+          "level_2": "レベル2",
+          "level_3": "レベル3",
+          "level_4": "レベル4",
+          "level_5": "レベル5",
+          "level_6": "レベル6",
+          "level_7": "レベル7",
+          "level_8": "レベル8",
+          "level_9": "レベル9"
+        }
+      },
+      "quirk_panasonic_water_heater_f0_raw": {
+        "name": "未解析プロパティ F0"
+      },
       "cumulative_energy": {
         "name": "チャンネル {channel} 積算電力量"
       },
@@ -4247,6 +4288,13 @@
           "off": "キープON",
           "on": "キープOFF"
         }
+      },
+      "quirk_panasonic_floor_power": {
+        "name": "動作状態",
+        "state": {
+          "off": "切",
+          "on": "入"
+        }
       }
     },
     "water_heater": {
@@ -4257,6 +4305,17 @@
               "auto": "自動沸き上げ",
               "manual_heating": "手動沸き上げ",
               "manual_no_heating": "手動沸き上げ停止",
+              "off": "OFF"
+            }
+          }
+        }
+      },
+      "panasonic_bath_water_heater": {
+        "name": "ふろ給湯器",
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "bath_auto": "ふろ自動",
               "off": "OFF"
             }
           }

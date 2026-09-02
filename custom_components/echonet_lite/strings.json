@@ -404,6 +404,9 @@
     "class_0f02": {
       "name": "User-defined device (0x0F02)"
     },
+    "quirk_panasonic_floor_heater": {
+      "name": "Floor heater"
+    },
     "unknown_class": {
       "name": "ECHONET Lite device {class_code}"
     }
@@ -3909,6 +3912,44 @@
       "class_0f02_epc_bb_000006": {
         "name": "[%key:component::echonet_lite::common::measured_value_of_room_temperature%]"
       },
+      "quirk_panasonic_bath_temperature": {
+        "name": "Bath temperature setting"
+      },
+      "quirk_panasonic_enefarm_f2": {
+        "name": "Hot water consumption in tank today"
+      },
+      "quirk_panasonic_enefarm_f3": {
+        "name": "Hot water consumption by combustion today"
+      },
+      "quirk_panasonic_enefarm_f4": {
+        "name": "Hot water level in tank"
+      },
+      "quirk_panasonic_enefarm_f6": {
+        "name": "Cumulative hot water consumption in tank"
+      },
+      "quirk_panasonic_enefarm_f7": {
+        "name": "Cumulative other gas consumption"
+      },
+      "quirk_panasonic_enefarm_f9_raw": {
+        "name": "Unknown property F9"
+      },
+      "quirk_panasonic_floor_heating_level": {
+        "name": "Heating level",
+        "state": {
+          "level_1": "Level 1",
+          "level_2": "Level 2",
+          "level_3": "Level 3",
+          "level_4": "Level 4",
+          "level_5": "Level 5",
+          "level_6": "Level 6",
+          "level_7": "Level 7",
+          "level_8": "Level 8",
+          "level_9": "Level 9"
+        }
+      },
+      "quirk_panasonic_water_heater_f0_raw": {
+        "name": "Unknown property F0"
+      },
       "cumulative_energy": {
         "name": "Channel {channel} cumulative energy"
       },
@@ -4443,6 +4484,13 @@
           "off": "Operating in keep mode",
           "on": "Operating in normal mode"
         }
+      },
+      "quirk_panasonic_floor_power": {
+        "name": "Operation status",
+        "state": {
+          "off": "Off",
+          "on": "On"
+        }
       }
     },
     "water_heater": {
@@ -4453,6 +4501,17 @@
               "auto": "[%key:common::state::auto%]",
               "manual_heating": "Manual (heating)",
               "manual_no_heating": "Manual (heating stopped)",
+              "off": "[%key:common::state::off%]"
+            }
+          }
+        }
+      },
+      "panasonic_bath_water_heater": {
+        "name": "Bath water heater",
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "bath_auto": "Bath auto",
               "off": "[%key:common::state::off%]"
             }
           }
