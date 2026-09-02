@@ -42,7 +42,7 @@ from .runtime import EchonetLiteConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
-PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 0
 
 _SUPPORTED_HVAC_MODES: list[HVACMode] = [
     HVACMode.OFF,

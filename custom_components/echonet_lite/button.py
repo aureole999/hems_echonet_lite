@@ -19,7 +19,7 @@ from .entity import (
 from .prop import EnumProp
 from .runtime import EchonetLiteConfigEntry
 
-PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)

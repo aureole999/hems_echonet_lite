@@ -25,7 +25,7 @@ from .entity import (
 from .prop import NumericProp
 from .runtime import EchonetLiteConfigEntry
 
-PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 0
 
 
 def _infer_device_class(

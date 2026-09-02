@@ -30,7 +30,7 @@ from .entity import EchonetLiteEntity, setup_dedicated_platform
 from .prop import BinaryProp, EnumProp, NumericProp
 from .runtime import EchonetLiteConfigEntry
 
-PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 0
 
 # Mapping between EPC 0xB1 (Light color setting) snake_case enum keys and the
 # kelvin presets exposed to Home Assistant.

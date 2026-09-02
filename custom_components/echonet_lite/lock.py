@@ -21,7 +21,7 @@ from .entity import EchonetLiteEntity, setup_dedicated_platform
 from .prop import BinaryProp, EnumProp
 from .runtime import EchonetLiteConfigEntry
 
-PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)

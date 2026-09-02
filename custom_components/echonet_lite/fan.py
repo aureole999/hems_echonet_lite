@@ -33,7 +33,7 @@ from .runtime import EchonetLiteConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
-PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 0
 
 # Ordered list of pyhems speed level keys (level_1 = slowest, level_8 = fastest)
 _SPEED_LEVELS = [
