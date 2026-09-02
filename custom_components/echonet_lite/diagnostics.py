@@ -157,7 +157,7 @@ async def async_get_config_entry_diagnostics(
     entry: EchonetLiteConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    controller = entry.runtime_data.controller
+    controller = entry.runtime_data
     coordinator = controller.coordinator
     health = controller.health
 
@@ -201,13 +201,14 @@ async def async_get_device_diagnostics(
     if device_key is None:
         return {"error": "device_not_found", "reason": "missing_identifier"}
 
-    node = entry.runtime_data.controller.coordinator.data.get(device_key)
+    coordinator = entry.runtime_data.coordinator
+    node = coordinator.data.get(device_key)
     if node is None:
         return async_redact_data(
             {"device_key": device_key, "node_known": False}, TO_REDACT
         )
 
-    node_dict = _node_to_dict(node, entry.runtime_data.device_manager)
+    node_dict = _node_to_dict(node, coordinator.device_manager)
     _add_poller_stats(node_dict, device_key=node.device_key, entry=entry)
 
     return async_redact_data(node_dict, TO_REDACT)

@@ -6,12 +6,13 @@ from typing import TYPE_CHECKING
 from pyhems import DeviceManager, HemsFrameEvent, HemsInstanceListEvent, NodeState
 
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
 if TYPE_CHECKING:
-    from .runtime import EchonetLiteConfigEntry
+    from .runtime import EchonetLiteConfigEntry, RuntimeHealth
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ class EchonetLiteCoordinator(DataUpdateCoordinator[dict[str, NodeState]]):
         *,
         config_entry: EchonetLiteConfigEntry,
         device_manager: DeviceManager,
+        health: RuntimeHealth,
     ) -> None:
         """Initialize the coordinator for a specific config entry."""
 
@@ -47,8 +49,20 @@ class EchonetLiteCoordinator(DataUpdateCoordinator[dict[str, NodeState]]):
         # snapshot right after startup; this default keeps ``.data`` iterable
         # for callers (and tests) that inspect it before the first update.
         self.data: dict[str, NodeState] = {}
-        self._last_runtime_activity_at: float | None = None
         self.device_manager = device_manager
+        # Per-node ``DeviceInfo`` cache keyed by ``node.device_key``. Built
+        # once on first entity instantiation for a node and shared by every
+        # entity platform bound to that node. Lives on the coordinator
+        # (rather than on the config entry's runtime data) since it shares
+        # the coordinator's per-entry lifetime and is only ever read via
+        # ``coordinator`` from entity setup.
+        self.device_info_cache: dict[str, DeviceInfo] = {}
+        # ``RuntimeHealth`` is the single canonical store for runtime health
+        # telemetry (client errors, restarts, activity). Kept here too so
+        # entities (which only have direct access to the coordinator via
+        # ``CoordinatorEntity``) can read ``last_runtime_activity_at``
+        # without reaching into ``RuntimeController``.
+        self._health = health
 
         # Wire DeviceManager callbacks to coordinator
         device_manager.on_device_added(self._on_device_added)
@@ -72,11 +86,11 @@ class EchonetLiteCoordinator(DataUpdateCoordinator[dict[str, NodeState]]):
     @property
     def last_runtime_activity_at(self) -> float | None:
         """Return the timestamp of the last runtime activity seen by HA."""
-        return self._last_runtime_activity_at
+        return self._health.last_runtime_activity_at
 
     def record_runtime_activity(self, timestamp: float) -> None:
         """Record the timestamp of the latest runtime activity."""
-        self._last_runtime_activity_at = timestamp
+        self._health.last_runtime_activity_at = timestamp
 
     async def async_process_frame_event(self, event: HemsFrameEvent) -> None:
         """Process a frame event via DeviceManager and notify listeners if updated."""
