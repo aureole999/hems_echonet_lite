@@ -527,6 +527,9 @@ UNIT_DEVICE_CLASS_RULES: tuple[
         (
             # Static tank capacity is not a variable measurement.
             ("capacity", None, None),
+            # Consumption readings remain water totals even when their name
+            # also mentions the source tank.
+            ("consumption", SensorDC.WATER, NumberDC.WATER),
             ("tank", SensorDC.VOLUME_STORAGE, NumberDC.VOLUME_STORAGE),
             ("remaining", SensorDC.VOLUME_STORAGE, NumberDC.VOLUME_STORAGE),
             ("", SensorDC.WATER, NumberDC.WATER),

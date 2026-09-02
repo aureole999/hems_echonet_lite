@@ -65,5 +65,5 @@ jobs:
         with:
           tag_name: "v${{ steps.bump_version.outputs.new_version }}"
           generate_release_notes: true
-          prerelease: true
+          prerelease: false
           files: ${{ github.workspace }}/custom_components/echonet_lite/echonet_lite.zip

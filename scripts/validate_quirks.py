@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 from pathlib import Path
@@ -41,9 +42,49 @@ def _translation_keys(data: dict) -> set[str]:
     return keys
 
 
+def _validate_discovery_compat(compat: ModuleType) -> None:
+    """Validate both released and development pyhems discovery surfaces."""
+
+    class ReleasedClient:
+        probe_calls = 0
+
+        async def probe_nodes(self) -> bool:
+            self.probe_calls += 1
+            return True
+
+    class DevelopmentClient(ReleasedClient):
+        initial_probe_calls = 0
+        periodic_start_calls = 0
+
+        async def probe_initial_nodes(self) -> bool:
+            self.initial_probe_calls += 1
+            return True
+
+        def start_periodic_discovery(self) -> None:
+            self.periodic_start_calls += 1
+
+    released = ReleasedClient()
+    if not asyncio.run(compat.async_probe_initial_nodes(released)):
+        raise ValueError("Released pyhems discovery compatibility probe failed")
+    compat.start_periodic_discovery(released)
+    if released.probe_calls != 1:
+        raise ValueError("Released pyhems did not use probe_nodes exactly once")
+
+    development = DevelopmentClient()
+    if not asyncio.run(compat.async_probe_initial_nodes(development)):
+        raise ValueError("Development pyhems initial discovery probe failed")
+    compat.start_periodic_discovery(development)
+    if development.initial_probe_calls != 1 or development.probe_calls != 0:
+        raise ValueError("Development pyhems did not prefer probe_initial_nodes")
+    if development.periodic_start_calls != 1:
+        raise ValueError("Development pyhems periodic discovery was not started")
+
+
 def main() -> None:
     """Validate schema, translations, and captured real-device decode fixtures."""
-    device_class = _load_module("echonet_pyhems_compat", COMPAT_PATH).DeviceClass
+    compat = _load_module("echonet_pyhems_compat", COMPAT_PATH)
+    _validate_discovery_compat(compat)
+    device_class = compat.DeviceClass
     registry = _load_module("echonet_quirk_registry", REGISTRY_PATH).QUIRKS
     unknown_class_codes = {
         int(class_code) for class_code in device_class if class_code not in registry.entities

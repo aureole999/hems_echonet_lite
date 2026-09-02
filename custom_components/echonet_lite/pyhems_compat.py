@@ -1,6 +1,8 @@
 """Compatibility helpers for released and development pyhems versions."""
 
+from collections.abc import Awaitable, Callable
 from enum import IntEnum
+from typing import Protocol, cast
 
 try:
     from pyhems import DeviceClass
@@ -37,4 +39,40 @@ except ImportError:
         CONTROLLER = 0x05FF
 
 
-__all__ = ["DeviceClass"]
+class _HemsClientProtocol(Protocol):
+    """Common discovery surface exposed by all supported pyhems versions."""
+
+    async def probe_nodes(self) -> bool:
+        """Send a node discovery probe."""
+
+
+async def async_probe_initial_nodes(client: _HemsClientProtocol) -> bool:
+    """Run the best initial node probe supported by the installed pyhems."""
+    probe_initial = cast(
+        Callable[[], Awaitable[bool]] | None,
+        getattr(client, "probe_initial_nodes", None),
+    )
+    if probe_initial is not None:
+        return await probe_initial()
+    return await client.probe_nodes()
+
+
+def start_periodic_discovery(client: _HemsClientProtocol) -> None:
+    """Start deferred discovery when required by the installed pyhems.
+
+    pyhems 0.8.8 starts its periodic probe loop in ``HemsClient.start()``.
+    Development versions defer it until ``start_periodic_discovery()``.
+    """
+    start_periodic = cast(
+        Callable[[], None] | None,
+        getattr(client, "start_periodic_discovery", None),
+    )
+    if start_periodic is not None:
+        start_periodic()
+
+
+__all__ = [
+    "DeviceClass",
+    "async_probe_initial_nodes",
+    "start_periodic_discovery",
+]

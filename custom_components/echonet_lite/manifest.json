@@ -1,16 +1,16 @@
 {
   "domain": "echonet_lite",
   "name": "HEMS ECHONET Lite Custom",
-  "codeowners": ["@sayurin"],
+  "codeowners": ["@aureole999", "@sayurin"],
   "config_flow": true,
   "dependencies": ["network"],
-  "documentation": "https://github.com/sayurin/hems_echonet_lite",
+  "documentation": "https://github.com/aureole999/hems_echonet_lite",
   "integration_type": "hub",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/sayurin/hems_echonet_lite/issues",
+  "issue_tracker": "https://github.com/aureole999/hems_echonet_lite/issues",
   "loggers": ["pyhems"],
   "quality_scale": "silver",
   "requirements": ["pyhems==0.8.8"],
   "single_config_entry": true,
-  "version": "2026.9.0"
+  "version": "2026.9.1"
 }

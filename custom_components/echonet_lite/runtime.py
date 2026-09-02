@@ -26,6 +26,7 @@ from homeassistant.helpers.event import async_track_time_interval
 
 from .const import DOMAIN, ISSUE_RUNTIME_CLIENT_ERROR, ISSUE_RUNTIME_INACTIVE
 from .coordinator import EchonetLiteCoordinator
+from .pyhems_compat import async_probe_initial_nodes, start_periodic_discovery
 
 _LOGGER = logging.getLogger(__name__)
 _INITIAL_DISCOVERY_TIMEOUT = 30.0
@@ -268,7 +269,7 @@ class RuntimeController:
 
     async def _run_initial_discovery(self) -> None:
         """Run the initial probe and start recurring discovery."""
-        if not await self.client.probe_initial_nodes():
+        if not await async_probe_initial_nodes(self.client):
             _LOGGER.warning("Initial ECHONET Lite node discovery could not be sent")
             self._start_periodic_discovery()
             return
@@ -290,7 +291,7 @@ class RuntimeController:
         if self._periodic_discovery_started:
             return
         self._periodic_discovery_started = True
-        self.client.start_periodic_discovery()
+        start_periodic_discovery(self.client)
 
     @callback
     def _handle_runtime_event(self, event: RuntimeEvent) -> None:
@@ -375,7 +376,7 @@ class RuntimeController:
             if self._initial_discovery_complete.is_set():
                 self._start_periodic_discovery()
             else:
-                await self.client.probe_initial_nodes()
+                await async_probe_initial_nodes(self.client)
             self.health.last_restart_at = time.monotonic()
             self.issue_monitor.clear_client_error()
             # Treat a successful restart as activity so the inactivity issue
