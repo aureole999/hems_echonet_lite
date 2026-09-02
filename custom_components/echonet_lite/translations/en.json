@@ -215,7 +215,7 @@
                     "interface": "Select the network interface to use for ECHONET Lite communication. Select Auto to let Home Assistant automatically detect the appropriate interface."
                 },
                 "description": "Change the network interface for ECHONET Lite communication.",
-                "title": "Reconfigure ECHONET Lite"
+                "title": "Reconfigure HEMS ECHONET Lite Custom"
             },
             "user": {
                 "data": {
@@ -225,7 +225,7 @@
                     "interface": "Select the network interface to use for ECHONET Lite communication. Select Auto to let Home Assistant automatically detect the appropriate interface."
                 },
                 "description": "Home Assistant automatically binds to the ECHONET Lite multicast channel (224.0.23.0:3610) and begins listening for devices.",
-                "title": "Set up ECHONET Lite"
+                "title": "Set up HEMS ECHONET Lite Custom"
             }
         }
     },

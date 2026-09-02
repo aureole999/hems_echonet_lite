@@ -1,4 +1,4 @@
-# HEMS Echonet Lite Integration for Home Assistant
+# HEMS ECHONET Lite Custom for Home Assistant
 
 [![HACS](https://img.shields.io/badge/hacs-default-blue)](https://hacs.xyz/)
 [![Quality Scale](https://img.shields.io/github/manifest-json/quality_scale/sayurin/hems_echonet_lite?filename=custom_components/echonet_lite/manifest.json&label=quality+scale&color=mediumpurple)](https://www.home-assistant.io/docs/quality_scale/)
@@ -194,7 +194,7 @@ The integration uses both polling and event-driven updates:
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=sayurin&repository=hems_echonet_lite&category=integration)
 
-1. Select the button above, or search for **"HEMS Echonet Lite"** in HACS.
+1. Select the button above, or search for **"HEMS ECHONET Lite Custom"** in HACS.
 2. Install the integration.
 3. Restart Home Assistant.
 
@@ -213,7 +213,7 @@ The integration uses both polling and event-driven updates:
 ## Configuration
 
 1. Go to **Settings → Devices & Services → Add Integration**.
-2. Search for **"HEMS Echonet Lite"**.
+2. Search for **"HEMS ECHONET Lite Custom"**.
 3. Select your network interface:
    - **Auto** (`0.0.0.0`): Listen on all interfaces (recommended)
    - **Specific IP**: Bind to a particular network interface
@@ -223,7 +223,7 @@ The integration uses both polling and event-driven updates:
 
 ### Options
 
-After setup, configure in **Settings → Devices & Services → HEMS Echonet Lite → Configure**:
+After setup, configure in **Settings → Devices & Services → HEMS ECHONET Lite Custom → Configure**:
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -231,7 +231,7 @@ After setup, configure in **Settings → Devices & Services → HEMS Echonet Lit
 
 ### Reconfiguration
 
-The network interface can be changed at any time via **Settings → Devices & Services → HEMS Echonet Lite → Reconfigure**.
+The network interface can be changed at any time via **Settings → Devices & Services → HEMS ECHONET Lite Custom → Reconfigure**.
 
 ## Examples
 
@@ -360,7 +360,7 @@ Some ECHONET Lite devices appear, but others do not.
 
 1. If the missing device is an experimental device class, enable **Enable experimental device classes** in the integration options.
 2. Some devices may take longer to respond. Wait a few minutes and check again, as re-discovery runs every hour.
-3. Try reloading the integration from **Settings → Devices & Services → HEMS Echonet Lite → ⋮ → Reload**.
+3. Try reloading the integration from **Settings → Devices & Services → HEMS ECHONET Lite Custom → ⋮ → Reload**.
 4. Verify the device supports ECHONET Lite. Some appliances have ECHONET Lite disabled by default and require enabling via the manufacturer's app or settings.
 
 ### Devices show as unavailable
@@ -380,11 +380,11 @@ The integration automatically creates repair issues in the following situations:
 
 ## Removing the Integration
 
-To remove the integration, go to **Settings → Devices & Services**, select **HEMS Echonet Lite**, and select **Delete**.
+To remove the integration, go to **Settings → Devices & Services**, select **HEMS ECHONET Lite Custom**, and select **Delete**.
 
 ### Removing a single device
 
-Individual devices can be removed from **Settings → Devices & Services → HEMS Echonet Lite → (device) → Delete**, but only when the device is no longer reachable on the local network (not currently active in the integration).
+Individual devices can be removed from **Settings → Devices & Services → HEMS ECHONET Lite Custom → (device) → Delete**, but only when the device is no longer reachable on the local network (not currently active in the integration).
 
 If a device is still being discovered (powered on and responding), removal will be rejected. Power off the device or remove it from your network first, then try again.
 

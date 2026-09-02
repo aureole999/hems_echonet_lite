@@ -19,7 +19,7 @@
           "interface": "ECHONET Lite通信に使用するネットワークインターフェースを選択してください。自動を選択すると、Home Assistantが自動的に適切なインターフェースを検出します。"
         },
         "description": "ECHONET Lite通信のネットワークインターフェースを変更します。",
-        "title": "ECHONET Liteの再設定"
+        "title": "HEMS ECHONET Lite Customの再設定"
       },
       "user": {
         "data": {
@@ -29,7 +29,7 @@
           "interface": "ECHONET Lite通信に使用するネットワークインターフェースを選択してください。自動を選択すると、Home Assistantが自動的に適切なインターフェースを検出します。"
         },
         "description": "Home Assistantは自動的にECHONET Liteマルチキャストチャネル（224.0.23.0:3610）にバインドし、デバイスの検出を開始します。",
-        "title": "ECHONET Liteのセットアップ"
+        "title": "HEMS ECHONET Lite Customのセットアップ"
       }
     }
   },

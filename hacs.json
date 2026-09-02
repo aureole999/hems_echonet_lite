@@ -1,5 +1,5 @@
 {
-  "name": "HEMS echonet lite",
+  "name": "HEMS ECHONET Lite Custom",
   "homeassistant": "2026.7.0",
   "zip_release": true,
   "filename": "echonet_lite.zip"
