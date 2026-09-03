@@ -404,6 +404,12 @@
     "class_0f02": {
       "name": "User-defined device (0x0F02)"
     },
+    "quirk_aiphone_wp_2med_display": {
+      "name": "AIPHONE WP-2MED display"
+    },
+    "quirk_aiphone_wp_2med_visitor_sensor": {
+      "name": "AIPHONE WP-2MED visitor sensor"
+    },
     "quirk_panasonic_floor_heater": {
       "name": "Floor heater"
     },
@@ -3911,6 +3917,13 @@
       },
       "class_0f02_epc_bb_000006": {
         "name": "[%key:component::echonet_lite::common::measured_value_of_room_temperature%]"
+      },
+      "quirk_aiphone_visitor_call": {
+        "name": "Visitor call",
+        "state": {
+          "off": "Clear",
+          "on": "Visitor detected"
+        }
       },
       "quirk_panasonic_bath_temperature": {
         "name": "Bath temperature setting"

@@ -6,12 +6,11 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
-from pyhems import get_codec
-
+from pyhems import DeviceManager, Frame, HemsFrameEvent, get_codec
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPAT_PATH = ROOT / "custom_components" / "echonet_lite" / "pyhems_compat.py"
@@ -80,10 +79,47 @@ def _validate_discovery_compat(compat: ModuleType) -> None:
         raise ValueError("Development pyhems periodic discovery was not started")
 
 
+def _validate_aiphone_push_updates() -> None:
+    """Replay captured WP-2MED INF frames through DeviceManager."""
+    node_id = "00112233445566778899AABBCCDDEEFF"
+    device_key = f"{node_id}-000801"
+    manager = DeviceManager(
+        client=SimpleNamespace(),
+        monitored_epcs={0x0008: frozenset({0xB1})},
+    )
+    managed_node = SimpleNamespace(properties={0xB1: b"\x42"})
+    manager.data[device_key] = managed_node
+    updated_device_keys: list[str] = []
+    manager.on_device_updated(updated_device_keys.append)
+
+    frames = (
+        # Captured door-station press: B1=0x41, F1 carries related vendor data.
+        "108100000008010EF0017302B10141F10504BBE00100",
+        # Captured automatic reset: B1=0x42 and F1 returns to all zeroes.
+        "108100000008010EF0017302B10142F1050000000000",
+    )
+    for received_at, frame_hex in enumerate(frames, start=1):
+        frame = Frame.decode(bytes.fromhex(frame_hex))
+        event = HemsFrameEvent(
+            received_at=float(received_at),
+            frame=frame,
+            node_id=node_id,
+            eoj=frame.seoj,
+        )
+        if not manager.process_frame_event(event):
+            raise ValueError("AIPHONE WP-2MED INF frame did not update device state")
+
+    if updated_device_keys != [device_key, device_key]:
+        raise ValueError("AIPHONE WP-2MED INF frames did not emit two push updates")
+    if managed_node.properties[0xB1] != b"\x42":
+        raise ValueError("AIPHONE WP-2MED visitor state did not return to clear")
+
+
 def main() -> None:
     """Validate schema, translations, and captured real-device decode fixtures."""
     compat = _load_module("echonet_pyhems_compat", COMPAT_PATH)
     _validate_discovery_compat(compat)
+    _validate_aiphone_push_updates()
     device_class = compat.DeviceClass
     registry = _load_module("echonet_quirk_registry", REGISTRY_PATH).QUIRKS
     unknown_class_codes = {
@@ -148,6 +184,27 @@ def main() -> None:
         raise ValueError("Ene-Farm product selector did not match FC-70JR13T")
     if registry.entity_matches("quirk_panasonic_enefarm_f2", other_fuel_cell):
         raise ValueError("Ene-Farm product selector matched an unrelated model")
+
+    visitor = node(0x0008, 0x00002F, "WP-2MED")
+    other_visitor = node(0x0008, 0x00002F, "OTHER")
+    visitor_definition = registry.local_entity_definition(
+        "aiphone_wp_2med_visitor_sensor", 0xB1
+    )
+    if visitor_definition is None:
+        raise ValueError("Missing AIPHONE WP-2MED visitor-call definition")
+    if not registry.entity_matches("quirk_aiphone_visitor_call", visitor):
+        raise ValueError("AIPHONE WP-2MED selector did not match the visitor sensor")
+    if registry.entity_matches("quirk_aiphone_visitor_call", other_visitor):
+        raise ValueError("AIPHONE WP-2MED selector matched an unrelated model")
+    visitor_codec = get_codec(visitor_definition)
+    if visitor_codec.decode(b"\x41") is not True:
+        raise ValueError("AIPHONE visitor-call EPC B1 did not decode 0x41 as active")
+    if visitor_codec.decode(b"\x42") is not False:
+        raise ValueError("AIPHONE visitor-call EPC B1 did not decode 0x42 as clear")
+    if 0xB1 not in registry.monitored_epcs.get(0x0008, frozenset()):
+        raise ValueError("AIPHONE visitor-call EPC B1 is not monitored")
+    if not {0x0008, 0x0601} <= registry.verified_class_codes:
+        raise ValueError("AIPHONE WP-2MED classes are not enabled as verified devices")
 
     floor = node(0x0F70, 0x00000B)
     settle = registry.settle_seconds(floor, "quirk_panasonic_floor_power", 0x80)

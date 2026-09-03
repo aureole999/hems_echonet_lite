@@ -32,6 +32,7 @@ Device classes fall into two categories:
 
 | Class Code | Device | HA Platform |
 |------------|--------|-------------|
+| 0x0008 | AIPHONE WP-2MED Visitor Sensor | Binary Sensor |
 | 0x0130 | Home Air Conditioner | Climate |
 | 0x0135 | Air Cleaner | Fan |
 | 0x0263 | Electrically operated rain sliding door/shutter | Cover |
@@ -53,6 +54,7 @@ Device classes fall into two categories:
 | 0x03BB | Rice Cooker |
 | 0x05FD | Switch (JEM-A/HA terminals) |
 | 0x05FF | Controller |
+| 0x0601 | AIPHONE WP-2MED Display |
 
 ### Experimental Device Classes
 
@@ -169,6 +171,8 @@ Currently included profiles:
   control via E3, and diagnostic raw F0 observation;
 - Panasonic user-defined floor heater (0x0F70): power with a configurable
   settling delay and read-only heating level;
+- AIPHONE WP-2MED visitor sensor (0x0008) and display (0x0601): a real-time
+  visitor-call binary sensor driven by the device's multicast INF notifications;
 - Toshiba home air conditioner (0x0130): fan labels, target humidity,
   Home/Away power-saving presets, and invalid outdoor-temperature suppression.
 

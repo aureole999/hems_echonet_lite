@@ -1,0 +1,21 @@
+{
+  "device": {
+    "quirk_aiphone_wp_2med_display": {
+      "name": "AIPHONE WP-2MED 显示器"
+    },
+    "quirk_aiphone_wp_2med_visitor_sensor": {
+      "name": "AIPHONE WP-2MED 访客传感器"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "quirk_aiphone_visitor_call": {
+        "name": "访客呼叫",
+        "state": {
+          "off": "无人呼叫",
+          "on": "检测到访客"
+        }
+      }
+    }
+  }
+}

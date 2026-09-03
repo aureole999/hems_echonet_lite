@@ -208,6 +208,12 @@
     "class_0f02": {
       "name": "ユーザ定義デバイス (0x0F02)"
     },
+    "quirk_aiphone_wp_2med_display": {
+      "name": "アイホン WP-2MED モニター"
+    },
+    "quirk_aiphone_wp_2med_visitor_sensor": {
+      "name": "アイホン WP-2MED 来客センサー"
+    },
     "quirk_panasonic_floor_heater": {
       "name": "床暖房"
     },
@@ -3715,6 +3721,13 @@
       },
       "class_0f02_epc_bb_000006": {
         "name": "室内温度計測値"
+      },
+      "quirk_aiphone_visitor_call": {
+        "name": "来客呼出",
+        "state": {
+          "off": "来客なし",
+          "on": "来客あり"
+        }
       },
       "quirk_panasonic_bath_temperature": {
         "name": "ふろ温度設定"

@@ -179,6 +179,51 @@
       ]
     },
     {
+      "id": "aiphone_wp_2med_visitor_sensor",
+      "match": {
+        "class_code": "0x0008",
+        "manufacturer_code": "0x00002F",
+        "product_codes": ["WP-2MED"]
+      },
+      "verified": true,
+      "device_translation_key": "quirk_aiphone_wp_2med_visitor_sensor",
+      "entities": [
+        {
+          "id": "quirk_aiphone_visitor_call",
+          "epc": "0xB1",
+          "type": "enum",
+          "get": "optional",
+          "set": "notApplicable",
+          "name_en": "Visitor occupancy",
+          "name_ja": "来客呼出",
+          "values": [
+            {
+              "edt": "0x41",
+              "key": "true",
+              "name_en": "Visitor detected",
+              "name_ja": "来客あり"
+            },
+            {
+              "edt": "0x42",
+              "key": "false",
+              "name_en": "Clear",
+              "name_ja": "来客なし"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aiphone_wp_2med_display",
+      "match": {
+        "class_code": "0x0601",
+        "manufacturer_code": "0x00002F",
+        "product_codes": ["WP-2MED"]
+      },
+      "verified": true,
+      "device_translation_key": "quirk_aiphone_wp_2med_display"
+    },
+    {
       "id": "toshiba_home_air_conditioner",
       "match": {
         "class_code": "0x0130",
