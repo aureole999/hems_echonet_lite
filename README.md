@@ -23,12 +23,12 @@ ECHONET Lite protocol integration for Home Assistant, powered by [pyhems](https:
 
 ## Supported Devices
 
-Device classes fall into two categories:
+Device classes are processed automatically when they are discovered:
 
-- **Stable** — verified with real hardware; enabled by default, no extra configuration needed.
-- **Experimental** — not verified with real hardware; must be enabled via integration options.
+- **Verified** — tested with real hardware.
+- **Other** — not yet verified with real hardware; support may vary by device.
 
-### Stable Device Classes
+### Verified Device Classes
 
 | Class Code | Device | HA Platform |
 |------------|--------|-------------|
@@ -39,6 +39,7 @@ Device classes fall into two categories:
 | 0x026B | Electric Water Heater | Water Heater |
 | 0x026F | Electric Lock | Lock |
 | 0x0272 | Instantaneous Water Heater |
+| 0x0273 | Bathroom Heating Dryer |
 | 0x0279 | Residential Solar Power Generation |
 | 0x027B | Floor heater |
 | 0x027D | Storage Battery |
@@ -47,18 +48,17 @@ Device classes fall into two categories:
 | 0x0281 | Water Flow Meter |
 | 0x0282 | Gas Meter |
 | 0x0287 | Power Distribution Board Metering |
+| 0x0290 | General Lighting | Light |
 | 0x0291 | Mono-Functional Lighting | Light |
+| 0x02A3 | Lighting System | Light |
 | 0x02A5 | Multiple Input PCS |
 | 0x02A6 | Hybrid water heater |
+| 0x03B7 | Refrigerator |
 | 0x03B8 | Oven |
 | 0x03BB | Rice Cooker |
 | 0x05FD | Switch (JEM-A/HA terminals) |
 | 0x05FF | Controller |
 | 0x0601 | AIPHONE WP-2MED Display |
-
-### Experimental Device Classes
-
-The other classes require **Enable experimental device classes** to be turned on in the integration options.
 
 ## Supported Functionality
 
@@ -118,6 +118,27 @@ All remaining properties are automatically mapped based on the ECHONET Lite prop
 | 3+ value enum | Select | Sensor (enum) |
 | 1-value enum | Button | — |
 | Numeric | Number | Sensor |
+| Scalar calendar date | Date | Sensor (date) |
+| Scalar local datetime | Date/time | Sensor (timestamp) |
+| Scalar clock time | Time | Not exposed |
+| Scalar duration | Number (duration) | Sensor (duration) |
+
+Platform selection uses the definition's readable/writable flags, not the
+device's SET property map. GET-only devices keep the defined platform without
+a sensor fallback; writes still require actual SET support. Readonly clock
+definitions are not exposed.
+Durations use minutes for two-byte values and seconds for three-byte values;
+they are not clock times. Unrepresentable precision is rejected, not rounded.
+
+Except for clocks, readonly temporal `oneOf` values with explicit special states use one sensor,
+with special states shown as unknown. Writable temporal unions and temporal
+fields within objects/arrays are not exposed. No auxiliary switches or remembered
+restoration values are added. Node-profile temporal values are not exposed.
+
+Datetimes use Home Assistant's timezone, without zone or area configuration.
+Changing it reinterprets cached local values, without writing the device clock.
+Ambiguous/nonexistent DST times become unknown on read and are rejected on write.
+Dates, clock times and durations are not timezone-shifted.
 
 ## Manufacturer-Specific Extensions
 
@@ -129,6 +150,7 @@ Sharp air cleaners expose extra environmental data via manufacturer-specific EPC
 
 | Entity | Unit | Notes |
 |--------|------|-------|
+| Illuminance | — | Bright/dark status |
 | Temperature | °C | Room temperature measured inside the unit |
 | Humidity | %RH | Relative humidity measured inside the unit |
 | PM2.5 | µg/m³ | Particulate matter concentration |
@@ -142,6 +164,17 @@ Sharp solar power systems expose per-string input data via manufacturer-specific
 | Input Voltage 1–4 | V | 0xF2 |
 | Input Current 1–4 | A | 0xF3 |
 | Input Power 1–4 | W | 0xF4 |
+
+### Nichicon — Multiple Input PCS (0x02A5)
+
+Nichicon Tribrid systems expose grid exchange and household consumption data via manufacturer-specific EPCs. The following sensor entities are added when a Nichicon device is detected:
+
+| Entity | Unit | EPC |
+|--------|------|-----|
+| Instantaneous Grid Electric Power | W | 0xF5 |
+| Instantaneous Household Consumption | W | 0xF5 (second value) |
+| Cumulative Electric Energy Bought | kWh | 0xF6 |
+| Cumulative Electric Energy Sold | kWh | 0xF6 (second value) |
 
 ### Sharp — Controller (0x05FF)
 
@@ -212,6 +245,7 @@ The integration uses both polling and event-driven updates:
 - Home Assistant 2026.3 or later
 - ECHONET Lite compatible devices on the same local network as Home Assistant
 - UDP multicast traffic allowed on your network (address 224.0.23.0, port 3610)
+- If Home Assistant is running on a multi-homed machine, configure a route for multicast traffic to 224.0.23.0 (for example, `ip route replace 224.0.23.0/32 dev eth0`)
 - If running Home Assistant in a container or VM, ensure multicast traffic is properly forwarded (for example, `network_mode: host` in Docker)
 
 ## Configuration
@@ -224,14 +258,6 @@ The integration uses both polling and event-driven updates:
 4. The integration starts listening on the ECHONET Lite multicast group (224.0.23.0:3610) and discovers devices automatically.
 
 > Only one instance is allowed per Home Assistant installation.
-
-### Options
-
-After setup, configure in **Settings → Devices & Services → HEMS ECHONET Lite Custom → Configure**:
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| Enable experimental device classes | Include device classes that have not been verified with real hardware. These may not work correctly. | Off |
 
 ### Reconfiguration
 
@@ -343,7 +369,7 @@ automation:
 - Only IPv4 networks are supported.
 - UDP multicast must be supported and enabled on your network.
 - Some device properties may not be available if the device does not advertise them in its property map.
-- Experimental device classes have not been tested with real hardware and may not function correctly.
+- Device classes that have not been tested with real hardware may not function correctly.
 - Only one integration instance per Home Assistant installation is supported.
 
 ## Troubleshooting
@@ -362,10 +388,9 @@ After setting up the integration, no devices appear at all.
 
 Some ECHONET Lite devices appear, but others do not.
 
-1. If the missing device is an experimental device class, enable **Enable experimental device classes** in the integration options.
-2. Some devices may take longer to respond. Wait a few minutes and check again, as re-discovery runs every hour.
-3. Try reloading the integration from **Settings → Devices & Services → HEMS ECHONET Lite Custom → ⋮ → Reload**.
-4. Verify the device supports ECHONET Lite. Some appliances have ECHONET Lite disabled by default and require enabling via the manufacturer's app or settings.
+1. Some devices may take longer to respond. Wait a few minutes and check again, as re-discovery runs every hour.
+2. Try reloading the integration from **Settings → Devices & Services → HEMS ECHONET Lite Custom → ⋮ → Reload**.
+3. Verify the device supports ECHONET Lite. Some appliances have ECHONET Lite disabled by default and require enabling via the manufacturer's app or settings.
 
 ### Devices show as unavailable
 
@@ -396,3 +421,15 @@ If a device is still being discovered (powered on and responding), removal will 
 
 - [ECHONET Consortium](https://echonet.jp/) for the ECHONET Lite specification
 - [pyhems](https://github.com/sayurin/pyhems) library for ECHONET Lite protocol handling
+
+### Validate household device compatibility
+
+Install Home Assistant 2026.11.0 and the manifest's `pyhems==0.9.1` in an
+isolated Python 3.14 environment, then run:
+
+```sh
+python scripts/validate_quirks.py
+python scripts/validate_platforms.py
+```
+
+The checks use captured values and simulated writes; they do not contact devices.

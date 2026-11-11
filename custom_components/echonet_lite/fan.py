@@ -13,7 +13,6 @@ from homeassistant.components.fan import (
 )
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util.percentage import (
     ordered_list_item_to_percentage,
@@ -21,8 +20,7 @@ from homeassistant.util.percentage import (
 )
 
 from .const import (
-    DEDICATED_PLATFORM_EPCS,
-    DOMAIN,
+    DEDICATED_PLATFORM_REQUIRED_EPCS,
     EPC_AIR_FLOW_LEVEL,
     EPC_OPERATION_STATUS,
 )
@@ -122,7 +120,7 @@ class EchonetLiteFan(EchonetLiteEntity, FanEntity):
         super().__init__(coordinator, node)
         self.entity_description = description
         self._attr_unique_id = f"{node.device_key}-{description.key}"
-        self._subscribed_epcs = DEDICATED_PLATFORM_EPCS.get(
+        self._subscribed_epcs = DEDICATED_PLATFORM_REQUIRED_EPCS.get(
             node.eoj.class_code, frozenset()
         )
 
@@ -183,16 +181,10 @@ class EchonetLiteFan(EchonetLiteEntity, FanEntity):
         * ``preset_mode="manual"``: ``OP_STATUS=ON`` only. ``manual`` is
           not a distinct ECHONET level, so no ``AIR_FLOW_LEVEL`` is sent.
         """
-        if EPC_OPERATION_STATUS not in self._node.set_epcs:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="epc_not_writable",
-                translation_placeholders={"epc_list": f"0x{EPC_OPERATION_STATUS:02X}"},
-            )
 
         # Turn off the fan if percentage is explicitly set to 0
         if percentage == 0:
-            await self._async_send_prop(self.entity_description.op_status, False)
+            await self._send_prop(self.entity_description.op_status, False)
             return
 
         properties: list[Property] = [
@@ -213,12 +205,12 @@ class EchonetLiteFan(EchonetLiteEntity, FanEntity):
                     )
                 )
 
-        await self._async_send_properties(properties)
+        await self._send_properties(properties)
 
     @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the fan."""
-        await self._async_send_prop(self.entity_description.op_status, False)
+        await self._send_prop(self.entity_description.op_status, False)
 
     @override
     async def async_set_percentage(self, percentage: int) -> None:
@@ -231,16 +223,14 @@ class EchonetLiteFan(EchonetLiteEntity, FanEntity):
         is treated as OFF per HA convention.
         """
         if percentage == 0:
-            await self._async_send_prop(self.entity_description.op_status, False)
-            return
-        if EPC_AIR_FLOW_LEVEL not in self._node.set_epcs:
+            await self._send_prop(self.entity_description.op_status, False)
             return
         properties: list[Property] = []
         if not self.is_on:
             properties.append(self.entity_description.op_status.make_property(True))
         key = percentage_to_ordered_list_item(_SPEED_LEVELS, percentage)
         properties.append(self.entity_description.air_flow_prop.make_property(key))
-        await self._async_send_properties(properties)
+        await self._send_properties(properties)
 
     @override
     async def async_set_preset_mode(self, preset_mode: str) -> None:
@@ -257,24 +247,16 @@ class EchonetLiteFan(EchonetLiteEntity, FanEntity):
         level with an arbitrary value.
         """
         if preset_mode == PRESET_MODE_AUTO:
-            if EPC_AIR_FLOW_LEVEL not in self._node.set_epcs:
-                return
             properties: list[Property] = []
             if not self.is_on:
                 properties.append(self.entity_description.op_status.make_property(True))
             properties.append(
                 self.entity_description.air_flow_prop.make_property(PRESET_MODE_AUTO)
             )
-            await self._async_send_properties(properties)
+            await self._send_properties(properties)
             return
 
         # preset_mode == PRESET_MODE_MANUAL
         if self.is_on:
             return
-        if EPC_OPERATION_STATUS not in self._node.set_epcs:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="epc_not_writable",
-                translation_placeholders={"epc_list": f"0x{EPC_OPERATION_STATUS:02X}"},
-            )
-        await self._async_send_prop(self.entity_description.op_status, True)
+        await self._send_prop(self.entity_description.op_status, True)

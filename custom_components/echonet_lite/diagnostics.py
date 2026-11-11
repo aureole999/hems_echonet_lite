@@ -1,14 +1,17 @@
 """Diagnostics support for the HEMS Echonet Lite integration."""
 
+import asyncio
+from collections import defaultdict
 from collections.abc import Mapping
+import logging
 from typing import Any
 
-from pyhems import DeviceManager, NodeState, decode_collection_page
+from pyhems import DeviceManager, HemsClient, NodeState, decode_collection_page
 
 from homeassistant.components.diagnostics import REDACTED, async_redact_data
 from homeassistant.const import CONF_UNIQUE_ID
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from homeassistant.helpers.device_registry import AnyDeviceEntry
 
 from .const import (
     COLLECTION_SENSOR_PROJECTIONS,
@@ -17,6 +20,8 @@ from .const import (
     EXCLUDED_EPCS_BY_CLASS,
 )
 from .runtime import EchonetLiteConfigEntry
+
+_LOGGER = logging.getLogger(__name__)
 
 TO_REDACT = {
     CONF_INTERFACE,
@@ -32,6 +37,12 @@ TO_REDACT = {
 # alongside ``serial_number``.
 TO_REDACT_PROPERTY_EPCS = frozenset({0x83, 0x8D})
 
+# Manufacturer-specific EPC range. These are not monitored by default, so
+# diagnostics read them from the device on demand.
+VENDOR_SPECIFIC_EPCS = frozenset(range(0xF0, 0x100))
+DIAGNOSTICS_GET_TIMEOUT = 5.0
+DIAGNOSTICS_TOTAL_TIMEOUT = 15.0
+
 
 def _format_epcs(epcs: frozenset[int]) -> str:
     """Return sorted EPCs as hexadecimal strings."""
@@ -44,6 +55,55 @@ def _format_properties(properties: Mapping[int, bytes]) -> dict[str, str]:
         f"0x{epc:02X}": REDACTED if epc in TO_REDACT_PROPERTY_EPCS else edt.hex(" ")
         for epc, edt in sorted(properties.items())
     }
+
+
+def _live_read_epcs(node: NodeState) -> list[int]:
+    """Return the vendor-specific EPCs to read from the device on demand."""
+    return sorted((VENDOR_SPECIFIC_EPCS & node.get_epcs) - node.monitored_epcs)
+
+
+async def _read_live_properties(
+    client: HemsClient, node: NodeState
+) -> dict[int, bytes]:
+    """Read vendor-specific EPCs from the device, ignoring empty responses.
+
+    The returned values are used directly instead of the cache because the
+    runtime event that updates the cache is processed asynchronously.
+    """
+    if not (epcs := _live_read_epcs(node)):
+        return {}
+    properties = await client.get(
+        node.node_id,
+        node.eoj,
+        epcs,
+        request_timeout=DIAGNOSTICS_GET_TIMEOUT,
+    )
+    return {prop.epc: prop.edt for prop in properties if prop.edt}
+
+
+async def _read_live_properties_for_nodes(
+    client: HemsClient, nodes: list[NodeState]
+) -> dict[str, dict[int, bytes]]:
+    """Read vendor-specific EPCs for nodes, returning values by device key.
+
+    Nodes sharing a ``node_id`` are read sequentially, different ``node_id``s
+    in parallel. Devices not finished within the total timeout are omitted.
+    """
+    live: dict[str, dict[int, bytes]] = {}
+    groups: defaultdict[str, list[NodeState]] = defaultdict(list)
+    for node in nodes:
+        groups[node.node_id].append(node)
+
+    async def _read_group(group: list[NodeState]) -> None:
+        for node in group:
+            live[node.device_key] = await _read_live_properties(client, node)
+
+    try:
+        async with asyncio.timeout(DIAGNOSTICS_TOTAL_TIMEOUT):
+            await asyncio.gather(*(_read_group(group) for group in groups.values()))
+    except TimeoutError:
+        _LOGGER.debug("Timed out reading vendor EPCs for diagnostics")
+    return live
 
 
 def _collection_pages(node: NodeState) -> dict[str, Any]:
@@ -68,7 +128,7 @@ def _collection_pages(node: NodeState) -> dict[str, Any]:
             pages[key] = {"ok": False, "start": None, "count": None}
             continue
         page = decode_collection_page(
-            node.eoj.class_code, projection.result_epc, edt, node
+            node.eoj.class_code, projection.result_epc, edt, node.properties
         )
         pages[key] = (
             {"ok": True, "start": page.start, "count": page.count}
@@ -80,7 +140,11 @@ def _collection_pages(node: NodeState) -> dict[str, Any]:
     return result
 
 
-def _node_to_dict(node: NodeState, device_manager: DeviceManager) -> dict[str, Any]:
+def _node_to_dict(
+    node: NodeState,
+    device_manager: DeviceManager,
+    live_properties: Mapping[int, bytes],
+) -> dict[str, Any]:
     """Serialize ``NodeState`` into a diagnostics-friendly dictionary."""
     eoj = node.eoj
 
@@ -98,26 +162,28 @@ def _node_to_dict(node: NodeState, device_manager: DeviceManager) -> dict[str, A
         "get_epcs": _format_epcs(node.get_epcs),
         "set_epcs": _format_epcs(node.set_epcs),
         "inf_epcs": _format_epcs(node.inf_epcs),
-        # INF_REQ (0x63) subscription outcome: attempted is the candidate
-        # set (monitored & inf_epcs); confirmed is the subset acknowledged
-        # via a 0x73 response ("subscribed successfully"); failed is the
-        # subset rejected (0x53) or unanswered, which falls back to polling.
-        "attempted_inf_epcs": _format_epcs(node.attempted_inf_epcs),
-        "confirmed_inf_epcs": _format_epcs(node.confirmed_inf_epcs),
-        "failed_inf_epcs": _format_epcs(node.failed_inf_epcs),
+        # One-time INF_REQ (0x63) at setup: the requested EPCs
+        # (monitored & inf_epcs), the subset the device notified in its 0x73
+        # response (no longer polled), and the subset rejected (0x53) or
+        # unanswered, which stays polled.
+        "inf_request_epcs": _format_epcs(node.inf_request_epcs),
+        "inf_notified_epcs": _format_epcs(node.inf_notified_epcs),
+        "inf_unconfirmed_epcs": _format_epcs(node.inf_unconfirmed_epcs),
         "poll_epcs": _format_epcs(node.poll_epcs),
         "fast_poll_epcs": _format_epcs(node.fast_poll_epcs),
-        # Narrowed by disabled-entity EPC subscriptions (Step 6). May equal
-        # the corresponding candidate set above if no entity has been
-        # disabled, or if subscriptions haven't been confirmed yet.
+        # Narrowed by entity EPC subscriptions. May equal the candidate set
+        # above if no entity has been disabled, or if subscriptions haven't
+        # been confirmed yet.
         "effective_poll_epcs": _format_epcs(
             device_manager.effective_poll_epcs(node.device_key)
         ),
         "effective_fast_poll_epcs": _format_epcs(
             device_manager.effective_fast_poll_epcs(node.device_key)
         ),
-        "observed_batch_capacity": node.observed_batch_capacity,
-        "properties": _format_properties(node.properties),
+        "observed_batch_capacity": device_manager.get_observed_batch_capacity(
+            node.device_key
+        ),
+        "properties": _format_properties({**node.properties, **live_properties}),
     }
     if collection := _collection_pages(node):
         node_dict["collection"] = collection
@@ -134,9 +200,7 @@ def _add_poller_stats(
     stats = entry.runtime_data.property_poller.get_device_stats(device_key)
     node_dict["poller"] = {
         "normal_interval": round(stats.normal_interval, 3),
-        "fast_interval": (
-            None if stats.fast_interval is None else round(stats.fast_interval, 3)
-        ),
+        "fast_interval": round(stats.fast_interval, 3),
         "latency_ewma": (
             None if stats.latency_ewma is None else round(stats.latency_ewma, 3)
         ),
@@ -144,7 +208,7 @@ def _add_poller_stats(
     }
 
 
-def _get_device_key(device: DeviceEntry) -> str | None:
+def _get_device_key(device: AnyDeviceEntry) -> str | None:
     """Extract the ECHONET Lite ``device_key`` from a device entry."""
     for domain, identifier in device.identifiers:
         if domain == DOMAIN:
@@ -161,9 +225,15 @@ async def async_get_config_entry_diagnostics(
     coordinator = controller.coordinator
     health = controller.health
 
+    nodes = [node for _, node in sorted(coordinator.data.items())]
+    async with controller.diagnostics_lock:
+        live = await _read_live_properties_for_nodes(controller.client, nodes)
+
     devices: list[dict[str, Any]] = []
-    for _, node in sorted(coordinator.data.items()):
-        node_dict = _node_to_dict(node, coordinator.device_manager)
+    for node in nodes:
+        node_dict = _node_to_dict(
+            node, coordinator.device_manager, live.get(node.device_key, {})
+        )
         _add_poller_stats(node_dict, device_key=node.device_key, entry=entry)
         devices.append(node_dict)
 
@@ -171,19 +241,20 @@ async def async_get_config_entry_diagnostics(
         "config_entry": entry.as_dict(),
         "runtime": {
             "device_count": len(coordinator.data),
-            "last_runtime_activity_seen": coordinator.last_runtime_activity_at
-            is not None,
-            "last_frame_received": coordinator.device_manager.last_frame_received_at
-            is not None,
+            "last_runtime_activity_seen": (
+                coordinator.device_manager.last_activity_at is not None
+            ),
             "health": {
                 "last_client_error": health.last_client_error,
                 "last_client_error_recorded": health.last_client_error_at is not None,
                 "last_restart_recorded": health.last_restart_at is not None,
                 "restart_attempts": health.restart_attempts,
+                "decode_error_count": controller.client.decode_error_count,
             },
             "tasks": {
-                "discovery_task_done": controller.discovery_task.done(),
-                "event_consumer_task_done": controller.event_consumer_task.done(),
+                "event_consumer_task_done": (
+                    coordinator.device_manager.event_consumer_task_done
+                ),
             },
         },
         "devices": devices,
@@ -194,21 +265,25 @@ async def async_get_config_entry_diagnostics(
 async def async_get_device_diagnostics(
     hass: HomeAssistant,
     entry: EchonetLiteConfigEntry,
-    device: DeviceEntry,
+    device: AnyDeviceEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
     device_key = _get_device_key(device)
     if device_key is None:
         return {"error": "device_not_found", "reason": "missing_identifier"}
 
-    coordinator = entry.runtime_data.coordinator
+    controller = entry.runtime_data
+    coordinator = controller.coordinator
     node = coordinator.data.get(device_key)
     if node is None:
         return async_redact_data(
             {"device_key": device_key, "node_known": False}, TO_REDACT
         )
 
-    node_dict = _node_to_dict(node, coordinator.device_manager)
+    async with controller.diagnostics_lock:
+        live = await _read_live_properties(controller.client, node)
+
+    node_dict = _node_to_dict(node, coordinator.device_manager, live)
     _add_poller_stats(node_dict, device_key=node.device_key, entry=entry)
 
     return async_redact_data(node_dict, TO_REDACT)

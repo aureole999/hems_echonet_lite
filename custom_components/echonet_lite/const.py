@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 import re
 
-from pyhems import EntityDefinition, PropertyRole
+from pyhems import DeviceClass, EntityDefinition, PropertyRole, Quantity
 
 from homeassistant.components.number import NumberDeviceClass as NumberDC
 from homeassistant.components.sensor import (
@@ -31,13 +31,9 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
 )
 
-from .pyhems_compat import DeviceClass
-from .quirks import QUIRKS
 
 DOMAIN = "echonet_lite"
-ATTR_EPC = "epc"
 CONF_INTERFACE = "interface"
-CONF_ENABLE_EXPERIMENTAL = "enable_experimental"
 DEFAULT_INTERFACE = "0.0.0.0"
 DEFAULT_POLL_INTERVAL = 60
 # Fixed cadence for the high-frequency polling tier (instantaneous values
@@ -106,41 +102,8 @@ EPC_DUPLEX_CUMULATIVE_ENERGY_LIST = 0xBA
 EPC_DUPLEX_INSTANTANEOUS_POWER_LIST = 0xBE
 EPC_UNIT_FOR_CUMULATIVE_ELECTRIC_ENERGY = 0xC2
 
-# Stable (non-experimental) device class codes
-# These device classes have been verified with real hardware.
-# Other device classes are considered experimental.
-STABLE_CLASS_CODES: frozenset[int] = (
-    frozenset(
-        {
-            DeviceClass.HOME_AIR_CONDITIONER,
-            DeviceClass.AIR_CLEANER,
-            DeviceClass.ELECTRIC_RAIN_DOOR,
-            DeviceClass.ELECTRIC_WATER_HEATER,
-            DeviceClass.ELECTRIC_LOCK,
-            DeviceClass.INSTANTANEOUS_WATER_HEATER,
-            DeviceClass.PV_POWER_GENERATION,
-            DeviceClass.FLOOR_HEATER,
-            DeviceClass.STORAGE_BATTERY,
-            DeviceClass.EV_CHARGER_DISCHARGER,
-            DeviceClass.WATT_HOUR_METER,
-            DeviceClass.WATER_FLOW_METER,
-            DeviceClass.GAS_METER,
-            DeviceClass.POWER_DISTRIBUTION_BOARD_METERING,
-            DeviceClass.MONO_FUNCTIONAL_LIGHTING,
-            DeviceClass.MULTIPLE_INPUT_PCS,
-            DeviceClass.HYBRID_WATER_HEATER,
-            DeviceClass.COMBINATION_MICROWAVE_OVEN,
-            DeviceClass.RICE_COOKER,
-            DeviceClass.SWITCH,
-            DeviceClass.CONTROLLER,
-        }
-    )
-    | QUIRKS.verified_class_codes
-)
-
-# EPCs managed by dedicated platform entities (climate, fan)
-# - Excluded from other platforms (sensor/binary_sensor/select/switch) to avoid duplicates
-# - Used for polling/notification to keep entity state up-to-date
+# EPCs owned by dedicated platform entities and excluded from generic platforms
+# (sensor/binary_sensor/select/switch) to avoid duplicate entities.
 DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
     DeviceClass.HOME_AIR_CONDITIONER: frozenset(
         {
@@ -216,6 +179,23 @@ DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
     ),
 }
 
+# EPCs required by dedicated platform entities for state updates. This is
+# separate from DEDICATED_PLATFORM_EPCS because some measured values are also
+# intentionally exposed as independent generic sensor entities.
+DEDICATED_PLATFORM_REQUIRED_EPCS: dict[int, frozenset[int]] = (
+    DEDICATED_PLATFORM_EPCS
+    | {
+        DeviceClass.HOME_AIR_CONDITIONER: DEDICATED_PLATFORM_EPCS[
+            DeviceClass.HOME_AIR_CONDITIONER
+        ]
+        | frozenset({EPC_ROOM_HUMIDITY, EPC_ROOM_TEMPERATURE}),
+        DeviceClass.ELECTRIC_WATER_HEATER: DEDICATED_PLATFORM_EPCS[
+            DeviceClass.ELECTRIC_WATER_HEATER
+        ]
+        | frozenset({EPC_MEASURED_WATER_TEMPERATURE}),
+    }
+)
+
 # EPCs permanently excluded from monitored/fast-poll EPC sets and from
 # scalar entity generation, per device class code. Unlike
 # DEDICATED_PLATFORM_EPCS (owned by another platform), these EPCs are not
@@ -226,7 +206,7 @@ DEDICATED_PLATFORM_EPCS: dict[int, frozenset[int]] = {
 # array EPCs (0xB1/0xB3/0xB7/0xB8/0xBA/0xBE, see
 # COLLECTION_SENSOR_PROJECTIONS below). Including both would create up to
 # 96 redundant entities and risk oversized Get requests being split across
-# frames; see docs/ha-0287-epc-be-implementation-report-v2.md section 6.2.
+# frames.
 EXCLUDED_EPCS_BY_CLASS: dict[int, frozenset[int]] = {
     DeviceClass.POWER_DISTRIBUTION_BOARD_METERING: frozenset(range(0xD0, 0xF0)),
 }
@@ -284,8 +264,7 @@ class CollectionSensorProjection:
           ``pyhems.CollectionBinding.result_epc`` for the same class_code.
         max_exposed_items: Maximum number of channel entities to create,
           independent of the MRA per-page item limit or the device's actual
-          channel count (see
-          docs/ha-0287-epc-be-implementation-report-v2.md section 3).
+          channel count.
         unique_id_prefix: Prefix for each channel entity's unique_id, before
           the channel number (e.g. ``"simplex_channel"``).
         fields: One or more fields decoded from each item (more than one for
@@ -387,10 +366,12 @@ COLLECTION_SENSOR_PROJECTIONS: tuple[CollectionSensorProjection, ...] = (
 
 
 def camel_to_snake(name: str) -> str:
-    """Convert camelCase to snake_case.
+    """Convert a pyhems enum key to a Home Assistant state key.
 
-    MRA enum names use camelCase (e.g., 'automaticAirFlowDirection').
-    HA uses snake_case for state keys (e.g., 'automatic_air_flow_direction').
+    pyhems keeps MRA identifiers in their MRA spelling (lowerCamelCase, e.g.
+    ``allStop``), while Home Assistant state and translation keys must be
+    snake_case. Every enum key exchanged with pyhems is converted here, for
+    both the values sent to devices and the translated states.
     """
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
@@ -472,108 +453,65 @@ def infer_ha_unit(entity_def: EntityDefinition) -> str | None:
     )  # pragma: no cover - safety net for unmapped MRA units
 
 
-# Unit -> device class rules, shared between the sensor and number platforms.
-#
-# Each entry is ``((units, ...), ((keyword, sensor_dc, number_dc), ...))``:
-# for each unit, rules are tried in order and the first keyword matched in
-# the entity's English name wins. An empty keyword ``""`` matches
-# unconditionally and acts as a catch-all default. If no rule matches the
-# entity's unit or name, ``(None, None)`` is returned (no device class).
-#
-# Either column may be ``None`` for units that only make sense as a sensor
-# (e.g. ``ppm``/``lux``/``µg/m³``) or have no matching NumberDC.
-UNIT_DEVICE_CLASS_RULES: tuple[
-    tuple[
-        tuple[str, ...],
-        tuple[tuple[str, SensorDC | None, NumberDC | None], ...],
-    ],
-    ...,
-] = (
-    (("W", "kW"), (("", SensorDC.POWER, NumberDC.POWER),)),
-    (("Celsius",), (("", SensorDC.TEMPERATURE, NumberDC.TEMPERATURE),)),
-    (("%RH",), (("", SensorDC.HUMIDITY, NumberDC.HUMIDITY),)),
-    (("A", "mA"), (("", SensorDC.CURRENT, NumberDC.CURRENT),)),
-    (("V",), (("", SensorDC.VOLTAGE, NumberDC.VOLTAGE),)),
-    (("ppm",), (("", SensorDC.CO2, None),)),
-    (("lux",), (("", SensorDC.ILLUMINANCE, None),)),
-    (("dB",), (("", SensorDC.SOUND_PRESSURE, None),)),
-    (("m/s",), (("", SensorDC.WIND_SPEED, None),)),
-    (("m3/h",), (("", SensorDC.VOLUME_FLOW_RATE, NumberDC.VOLUME_FLOW_RATE),)),
-    (("second", "days"), (("", SensorDC.DURATION, NumberDC.DURATION),)),
-    (
-        ("%",),
-        (
-            ("humidity", SensorDC.HUMIDITY, NumberDC.HUMIDITY),
-            ("battery", SensorDC.BATTERY, NumberDC.BATTERY),
-            # Number entities never reach these sensor-only keywords, but
-            # keeping both columns in the same row keeps the table flat.
-            ("remaining", SensorDC.BATTERY, None),
-            ("soc", SensorDC.BATTERY, None),
-            ("moisture", SensorDC.MOISTURE, NumberDC.MOISTURE),
-        ),
-    ),
-    (
-        ("Wh", "kWh", "MJ"),
-        (
-            # Static ratings (e.g. "AC chargeable capacity") don't fit
-            # measurement device classes.
-            ("capacity", None, None),
-            ("stored", SensorDC.ENERGY_STORAGE, NumberDC.ENERGY_STORAGE),
-            ("", SensorDC.ENERGY, NumberDC.ENERGY),
-        ),
-    ),
-    (
-        ("L",),
-        (
-            # Static tank capacity is not a variable measurement.
-            ("capacity", None, None),
-            # Consumption readings remain water totals even when their name
-            # also mentions the source tank.
-            ("consumption", SensorDC.WATER, NumberDC.WATER),
-            ("tank", SensorDC.VOLUME_STORAGE, NumberDC.VOLUME_STORAGE),
-            ("remaining", SensorDC.VOLUME_STORAGE, NumberDC.VOLUME_STORAGE),
-            ("", SensorDC.WATER, NumberDC.WATER),
-        ),
-    ),
-    (
-        ("m3",),
-        (
-            ("gas", SensorDC.GAS, NumberDC.GAS),
-            ("water", SensorDC.WATER, NumberDC.WATER),
-            ("", SensorDC.VOLUME, NumberDC.VOLUME),
-        ),
-    ),
-    (
-        ("µg/m³",),
-        (
-            ("pm2.5", SensorDC.PM25, None),
-            ("pm25", SensorDC.PM25, None),
-        ),
-    ),
-)
+# pyhems Quantity -> device class, for the sensor and number platforms.
+# pyhems derives the quantity of each numeric property from its MRA unit and
+# name; quantities missing here get no device class.
+QUANTITY_TO_SENSOR_DEVICE_CLASS: dict[Quantity, SensorDC] = {
+    Quantity.BATTERY_LEVEL: SensorDC.BATTERY,
+    Quantity.CO2_CONCENTRATION: SensorDC.CO2,
+    Quantity.CURRENT: SensorDC.CURRENT,
+    Quantity.DURATION: SensorDC.DURATION,
+    Quantity.ENERGY: SensorDC.ENERGY,
+    Quantity.GAS_VOLUME: SensorDC.GAS,
+    Quantity.HUMIDITY: SensorDC.HUMIDITY,
+    Quantity.ILLUMINANCE: SensorDC.ILLUMINANCE,
+    Quantity.MOISTURE: SensorDC.MOISTURE,
+    Quantity.PM25_CONCENTRATION: SensorDC.PM25,
+    Quantity.POWER: SensorDC.POWER,
+    Quantity.SOUND_PRESSURE: SensorDC.SOUND_PRESSURE,
+    Quantity.STORED_ENERGY: SensorDC.ENERGY_STORAGE,
+    Quantity.STORED_VOLUME: SensorDC.VOLUME_STORAGE,
+    Quantity.TEMPERATURE: SensorDC.TEMPERATURE,
+    Quantity.VOLTAGE: SensorDC.VOLTAGE,
+    Quantity.VOLUME: SensorDC.VOLUME,
+    Quantity.VOLUME_FLOW_RATE: SensorDC.VOLUME_FLOW_RATE,
+    Quantity.WATER_VOLUME: SensorDC.WATER,
+    Quantity.WIND_SPEED: SensorDC.WIND_SPEED,
+}
+QUANTITY_TO_NUMBER_DEVICE_CLASS: dict[Quantity, NumberDC] = {
+    Quantity.BATTERY_LEVEL: NumberDC.BATTERY,
+    Quantity.CO2_CONCENTRATION: NumberDC.CO2,
+    Quantity.CURRENT: NumberDC.CURRENT,
+    Quantity.DURATION: NumberDC.DURATION,
+    Quantity.ENERGY: NumberDC.ENERGY,
+    Quantity.GAS_VOLUME: NumberDC.GAS,
+    Quantity.HUMIDITY: NumberDC.HUMIDITY,
+    Quantity.ILLUMINANCE: NumberDC.ILLUMINANCE,
+    Quantity.MOISTURE: NumberDC.MOISTURE,
+    Quantity.PM25_CONCENTRATION: NumberDC.PM25,
+    Quantity.POWER: NumberDC.POWER,
+    Quantity.SOUND_PRESSURE: NumberDC.SOUND_PRESSURE,
+    Quantity.STORED_ENERGY: NumberDC.ENERGY_STORAGE,
+    Quantity.STORED_VOLUME: NumberDC.VOLUME_STORAGE,
+    Quantity.TEMPERATURE: NumberDC.TEMPERATURE,
+    Quantity.VOLTAGE: NumberDC.VOLTAGE,
+    Quantity.VOLUME: NumberDC.VOLUME,
+    Quantity.VOLUME_FLOW_RATE: NumberDC.VOLUME_FLOW_RATE,
+    Quantity.WATER_VOLUME: NumberDC.WATER,
+    Quantity.WIND_SPEED: NumberDC.WIND_SPEED,
+}
 
 
 def infer_device_classes(
     entity_def: EntityDefinition,
 ) -> tuple[SensorDC | None, NumberDC | None]:
-    """Return the ``(sensor_dc, number_dc)`` tuple for ``entity_def``.
-
-    See :data:`UNIT_DEVICE_CLASS_RULES` for the rule format. Returns
-    ``(None, None)`` when the unit is unknown or no rule matches the entity's
-    English name.
-    """
-    unit = entity_def.unit
-    if not unit:
+    """Return the ``(sensor_dc, number_dc)`` tuple for ``entity_def``."""
+    if entity_def.quantity is None:
         return None, None
-    name_lower = entity_def.name_en.lower()
-    for units, rules in UNIT_DEVICE_CLASS_RULES:
-        if unit not in units:
-            continue
-        for keyword, sensor_dc, number_dc in rules:
-            if keyword == "" or keyword in name_lower:
-                return sensor_dc, number_dc
-        return None, None
-    return None, None  # pragma: no cover - safety net for unmapped MRA units
+    return (
+        QUANTITY_TO_SENSOR_DEVICE_CLASS.get(entity_def.quantity),
+        QUANTITY_TO_NUMBER_DEVICE_CLASS.get(entity_def.quantity),
+    )
 
 
 # ============================================================================

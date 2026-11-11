@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    DEDICATED_PLATFORM_EPCS,
+    DEDICATED_PLATFORM_REQUIRED_EPCS,
     EPC_LOCK_ALARM_STATUS,
     EPC_LOCK_SETTING_1,
     EPC_LOCK_SETTING_2,
@@ -81,7 +81,7 @@ class EchonetLiteLock(EchonetLiteEntity, LockEntity):
         super().__init__(coordinator, node)
         self.entity_description = description
         self._attr_unique_id = f"{node.device_key}-{description.key}"
-        self._subscribed_epcs = DEDICATED_PLATFORM_EPCS.get(
+        self._subscribed_epcs = DEDICATED_PLATFORM_REQUIRED_EPCS.get(
             node.eoj.class_code, frozenset()
         )
         self._has_sub_lock = EPC_LOCK_SETTING_2 in node.get_epcs
@@ -131,9 +131,9 @@ class EchonetLiteLock(EchonetLiteEntity, LockEntity):
         sub-lock typically engage it themselves via Auto-Lock or via the
         physical mechanism.
         """
-        await self._async_send_prop(self.entity_description.lock_prop, True)
+        await self._send_prop(self.entity_description.lock_prop, True)
 
     @override
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the device by writing the primary lock EPC only."""
-        await self._async_send_prop(self.entity_description.lock_prop, False)
+        await self._send_prop(self.entity_description.lock_prop, False)

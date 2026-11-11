@@ -3,13 +3,12 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 import logging
-import time
 from typing import Self, override
 
 from pyhems import EntityDefinition, NodeState, Property
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import EVENT_CORE_CONFIG_UPDATE, Platform
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -17,88 +16,14 @@ from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    ATTR_EPC,
-    DEDICATED_PLATFORM_EPCS,
-    DOMAIN,
-    EXCLUDED_EPCS_BY_CLASS,
-    RUNTIME_MONITOR_MAX_SILENCE,
-    get_entity_category,
-)
+from .catalog import CATALOG
+from .const import DOMAIN, get_entity_category
 from .coordinator import EchonetLiteCoordinator
 from .prop import Prop
 from .quirks import QUIRKS
 from .runtime import EchonetLiteConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def can_process_enum_values(entity: EntityDefinition) -> bool:
-    """Check if entity's enum_values can be automatically processed.
-
-    Enum values must have unique keys for automatic processing.
-    Entities with duplicate keys cannot be reliably mapped and are
-    excluded from platform creation and string generation.
-
-    Args:
-        entity: Entity definition to check.
-
-    Returns:
-        True if enum_values can be processed, False otherwise.
-    """
-    if not entity.enum_values:
-        return True  # Numeric entities are always processable
-
-    keys = set()
-    for enum_val in entity.enum_values:
-        if enum_val.key in keys:
-            return False
-        keys.add(enum_val.key)
-
-    return True
-
-
-def infer_platform(entity: EntityDefinition) -> Platform | None:
-    """Infer the platform type from entity definition using MRA get/set info.
-
-    Decision matrix:
-        | Data shape    | readable + writable | readable only | write-only         |
-        |---------------|---------------------|---------------|-----------         |
-        | true/false enum | switch            | binary_sensor | None (skip)        |
-        | other enum values | select          | sensor (ENUM) | None (skip)        |
-        | 1 enum value  | None (skip)         | None (skip)   | button             |
-        | numeric       | number              | sensor        | None (skip)        |
-        | numericValue  | None (skip)         | None (skip)   | None (skip)        |
-
-    Args:
-        entity: Entity definition to analyze.
-
-    Returns:
-        Platform type string, or None if entity should be skipped.
-    """
-    # Readable property (get != notApplicable)
-    if entity.get != "notApplicable":
-        writable = entity.set != "notApplicable"
-        if entity.enum_values:
-            if len(entity.enum_values) == 1:
-                # Single enum value on readable property is skipped
-                return None
-            if entity.is_binary:
-                return Platform.SWITCH if writable else Platform.BINARY_SENSOR
-            return Platform.SELECT if writable else Platform.SENSOR
-        if entity.format is None:
-            # MRA "numericValue" properties (e.g. EPC 0xC2 unit/coefficient
-            # tables) are not exposed as HA entities themselves; they are
-            # only consumed internally via other entities' coefficient_epcs.
-            return None
-        return Platform.NUMBER if writable else Platform.SENSOR
-
-    # Write-only properties (get == notApplicable)
-    if entity.set != "notApplicable":
-        # Button: write-only with exactly 1 enum value (action command)
-        if entity.enum_values and len(entity.enum_values) == 1:
-            return Platform.BUTTON
-    return None
 
 
 def _get_or_build_device_info(
@@ -125,9 +50,10 @@ def _get_or_build_device_info(
 
     # Prefer a translation_key so the device name is localized via
     # ``strings.json`` (``device.class_XXXX.name``) rather than hard-coding
-    # the English MRA name. Unknown class codes (only possible with the
-    # experimental flag) fall back to the shared ``unknown_class`` key with
-    # the hex class code rendered through ``translation_placeholders``.
+    # the English MRA name. Every discovered class is set up, so class codes
+    # missing from the pyhems registry fall back to the shared
+    # ``unknown_class`` key with the hex class code rendered through
+    # ``translation_placeholders``.
     if node.class_name_en is not None:
         translation_key = f"class_{node.eoj.class_code:04x}"
         translation_placeholders: dict[str, str] | None = None
@@ -158,11 +84,6 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
 
     _attr_has_entity_name = True
 
-    # Threshold after which a lack of runtime activity marks the entity
-    # as unavailable. Matches the inactivity repair issue threshold so
-    # UI availability and the repair issue rise/fall together.
-    _runtime_silence_threshold: float = RUNTIME_MONITOR_MAX_SILENCE.total_seconds()
-
     def __init__(
         self,
         coordinator: EchonetLiteCoordinator,
@@ -185,10 +106,17 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
 
     @override
     async def async_added_to_hass(self) -> None:
-        """Subscribe this entity's EPCs for polling once added to hass."""
+        """Subscribe this entity's EPCs for polling and updates."""
         await super().async_added_to_hass()
         self._unsub_epc_subscription = self.coordinator.device_manager.subscribe_epcs(
             self._node.device_key, self._subscribed_epcs
+        )
+        self.async_on_remove(
+            self.coordinator.async_add_device_listener(
+                self._node.device_key,
+                self._subscribed_epcs,
+                self.async_write_ha_state,
+            )
         )
 
     @override
@@ -202,23 +130,23 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
     @property
     @override
     def available(self) -> bool:
-        """Return True if the underlying runtime is still receiving activity.
+        """Return True if the underlying device is responding to polling.
 
         Falls back to ``CoordinatorEntity.available`` first so disabled
-        coordinators still mark entities unavailable. Additionally, if the
-        runtime has been silent for longer than ``RUNTIME_MONITOR_MAX_SILENCE``,
-        the entity is reported as unavailable even while the coordinator
-        itself is considered healthy.
+        coordinators still mark entities unavailable. Devices without a
+        GET-capable liveness EPC remain available because their liveness
+        cannot be determined by the polling client.
         """
         if not super().available:
             return False
-        last_activity_at = self.coordinator.last_runtime_activity_at
-        if last_activity_at is None:
-            # No baseline yet: rely on the coordinator's own availability.
-            return True
-        return time.monotonic() - last_activity_at < self._runtime_silence_threshold
+        return (
+            self.coordinator.device_manager.is_device_polling_available(
+                self._node.device_key
+            )
+            is not False
+        )
 
-    async def _async_send_property(self, epc: int, value: bytes) -> None:
+    async def _send_property(self, epc: int, value: bytes) -> None:
         """Send a SetC request for a single EPC/value pair.
 
         Args:
@@ -228,9 +156,9 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
         Raises:
             HomeAssistantError: If the EPC is not writable by the device.
         """
-        await self._async_send_properties(properties=[Property(epc=epc, edt=value)])
+        await self._send_properties(properties=[Property(epc=epc, edt=value)])
 
-    async def _async_send_properties(self, properties: list[Property]) -> None:
+    async def _send_properties(self, properties: list[Property]) -> None:
         """Send a SetC request for multiple EPC/value pairs.
 
         Args:
@@ -250,29 +178,50 @@ class EchonetLiteEntity(CoordinatorEntity[EchonetLiteCoordinator]):
                 translation_key="epc_not_writable",
                 translation_placeholders={"epc_list": hex_list},
             )
-        controller = self.coordinator.config_entry.runtime_data
-        sent = await controller.client.set_properties(
+        result = await self.coordinator.device_manager.set_properties(
             node_id=node.node_id,
             deoj=node.eoj,
             properties=properties,
+            refresh=True,
         )
-        if not sent:
+        if not result.sent:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="target_node_unknown",
             )
+        if result.rejected_epcs or result.unanswered_epcs:
+            rejected_epcs = (
+                ", ".join(f"0x{epc:02X}" for epc in sorted(result.rejected_epcs))
+                or "none"
+            )
+            unanswered_epcs = (
+                ", ".join(f"0x{epc:02X}" for epc in sorted(result.unanswered_epcs))
+                or "none"
+            )
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="set_failed",
+                translation_placeholders={
+                    "rejected_epcs": rejected_epcs,
+                    "unanswered_epcs": unanswered_epcs,
+                },
+            )
 
-        # After a Set operation, schedule an earlier poll so the UI reflects the
-        # updated device state sooner.
-        controller.property_poller.schedule_immediate_poll(node.device_key)
-
-    async def _async_send_prop[ValueT](self, prop: Prop[ValueT], value: ValueT) -> None:
+    async def _send_prop[ValueT](self, prop: Prop[ValueT], value: ValueT) -> None:
         """Encode value via prop and send as a SetC request for this EPC.
 
         Raises:
             HomeAssistantError: If the EPC is not writable by the device.
         """
-        await self._async_send_properties([prop.make_property(value)])
+        try:
+            property_value = prop.make_property(value)
+        except ValueError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_property_value",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        await self._send_properties([property_value])
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -344,6 +293,7 @@ class EchonetLiteEntityDescription(EntityDescription):
             "translation_key": entity_def.id,
             "epc": entity_def.epc,
             "entity_category": get_entity_category(entity_def),
+            "entity_registry_enabled_default": entity_def.epc not in (0x97, 0x98),
             "manufacturer_code": entity_def.manufacturer_code,
             "coefficient_epcs": entity_def.coefficient_epcs or (),
         }
@@ -351,9 +301,10 @@ class EchonetLiteEntityDescription(EntityDescription):
     @classmethod
     def build_from_entity_def(
         cls,
+        class_code: int,
         entity_def: EntityDefinition,
     ) -> Self:
-        """Construct an instance from a pyhems EntityDefinition.
+        """Construct an instance from a pyhems EntityDefinition of ``class_code``.
 
         Subclasses must override this classmethod.  The override should call
         ``cls(key=…, prop=…, **cls._common_kwargs(entity_def))`` so that
@@ -384,7 +335,6 @@ class EchonetLiteDescribedEntity[DescriptionT: EchonetLiteEntityDescription](
     """
 
     description: DescriptionT
-    _epc: int
 
     def __init__(
         self,
@@ -394,19 +344,13 @@ class EchonetLiteDescribedEntity[DescriptionT: EchonetLiteEntityDescription](
     ) -> None:
         """Initialize a described ECHONET Lite entity.
 
+        The caller has already checked ``description.should_create(node)``.
+
         Args:
             coordinator: The data update coordinator.
             node: The node state for this entity.
             description: The entity description with EPC metadata.
-
-        Raises:
-            ValueError: If description.should_create(node) returns False.
         """
-        if not description.should_create(node):
-            raise ValueError(
-                f"Entity created for EPC 0x{description.epc:02X} "
-                "that doesn't meet creation criteria"
-            )
         super().__init__(coordinator, node)
         self.description = description
         self.entity_description = description  # HA standard attribute
@@ -418,7 +362,6 @@ class EchonetLiteDescribedEntity[DescriptionT: EchonetLiteEntityDescription](
         # consume. See ``tests/components/echonet_lite/test_generate_strings
         # ::TestDefinitionsStringsConsistency`` for the regression guard.
         self._attr_translation_key = description.translation_key
-        self._epc = description.epc
         # Coefficient EPCs (e.g. EPC 0xC2) are never exposed as their own
         # entity, so this entity must subscribe to them directly or they
         # would never actually be polled; see coefficient_epcs' docstring.
@@ -428,11 +371,18 @@ class EchonetLiteDescribedEntity[DescriptionT: EchonetLiteEntityDescription](
             | QUIRKS.dependencies_for(node, description.epc)
         )
 
-    @property
-    @override
-    def extra_state_attributes(self) -> dict[str, str]:
-        """Return extra state attributes exposing the ECHONET Property Code."""
-        return {ATTR_EPC: f"0x{self._epc:02X}"}
+    @callback
+    def _async_listen_timezone_updates(self) -> None:
+        """Reinterpret cached local datetimes when HA's timezone changes."""
+
+        @callback
+        def timezone_updated(event: Event) -> None:
+            if "time_zone" in event.data:
+                self.async_write_ha_state()
+
+        self.async_on_remove(
+            self.hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, timezone_updated)
+        )
 
 
 def build_platform_descriptions[DescriptionT: EchonetLiteEntityDescription](
@@ -458,23 +408,13 @@ def build_platform_descriptions[DescriptionT: EchonetLiteEntityDescription](
         Dict mapping class_code → list of entity descriptions for that platform.
     """
     descriptions: dict[int, list[DescriptionT]] = {}
-    for class_code, entity_defs in QUIRKS.entities.items():
-        excluded = DEDICATED_PLATFORM_EPCS.get(
-            class_code, frozenset()
-        ) | EXCLUDED_EPCS_BY_CLASS.get(class_code, frozenset())
-        descriptions[class_code] = [
-            description_cls.build_from_entity_def(entity_def)
-            for entity_def in entity_defs
-            if infer_platform(entity_def) == platform_type
-            and entity_def.epc not in excluded
-            and can_process_enum_values(entity_def)
-            # Skip writable bit/byte-packed sub-properties (set != notApplicable
-            # and byte_offset > 0). A single EPC payload often carries multiple
-            # sub-properties; only the leader (byte_offset == 0) owns the write
-            # path. Allowing followers to be set independently would clobber the
-            # sibling bits since pyhems writes the full EPC value at once.
-            and not (entity_def.set != "notApplicable" and entity_def.byte_offset > 0)
-        ]
+    for class_code, entries in CATALOG.items():
+        descriptions[class_code] = []
+        for entry in entries:
+            if entry.platform == platform_type:
+                descriptions[class_code].append(
+                    description_cls.build_from_entity_def(class_code, entry.entity_def)
+                )
     return descriptions
 
 
@@ -620,7 +560,7 @@ def setup_echonet_lite_device_platform(
         """Create entities for any device that became known since last call.
 
         Uses the standard ``DataUpdateCoordinator.async_add_listener`` hook:
-        every ``async_set_updated_data`` call in ``_on_device_added`` triggers
+        every ``async_set_updated_data`` call for a ``DeviceAdded`` event triggers
         this listener; we then diff ``coordinator.data`` against the keys we
         have already processed to find new devices.
         """
@@ -637,7 +577,11 @@ def setup_echonet_lite_device_platform(
             if not device_entities or not _has_enabled_entity_candidate(
                 coordinator.hass, platform_domain, device_entities
             ):
-                coordinator.device_manager.subscribe_epcs(device_key, frozenset())
+                # An empty subscription marks the device's interest as
+                # settled, so EPCs nobody subscribes to stop being polled.
+                entry.async_on_unload(
+                    coordinator.device_manager.subscribe_epcs(device_key, frozenset())
+                )
             new_entities.extend(device_entities)
         if new_entities:
             async_add_entities(new_entities)

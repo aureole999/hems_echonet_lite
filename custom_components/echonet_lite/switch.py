@@ -40,6 +40,7 @@ class EchonetLiteSwitchEntityDescription(
     @override
     def build_from_entity_def(
         cls,
+        class_code: int,
         entity_def: EntityDefinition,
     ) -> EchonetLiteSwitchEntityDescription:
         """Construct a switch description from an EntityDefinition."""
@@ -119,13 +120,13 @@ class EchonetLiteSwitch(
     @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Send the On command via the pyhems runtime client."""
-        await self._async_send_prop(self.description.prop, True)
+        await self._send_prop(self.description.prop, True)
         self._hold_pending_state(True)
 
     @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Send the Off command via the pyhems runtime client."""
-        await self._async_send_prop(self.description.prop, False)
+        await self._send_prop(self.description.prop, False)
         self._hold_pending_state(False)
 
     @override

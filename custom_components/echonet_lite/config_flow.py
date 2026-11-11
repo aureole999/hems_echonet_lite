@@ -4,8 +4,8 @@ from collections.abc import Mapping
 import logging
 from typing import Any, override
 
-from pyhems import create_multicast_socket
-import voluptuous as vol
+from probatio import Optional, Schema
+from pyhems import check_interface
 
 from homeassistant import config_entries
 from homeassistant.components import network
@@ -17,8 +17,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 
-from .const import CONF_ENABLE_EXPERIMENTAL, CONF_INTERFACE, DEFAULT_INTERFACE, DOMAIN
-from .runtime import EchonetLiteConfigEntry
+from .const import CONF_INTERFACE, DEFAULT_INTERFACE, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,19 +26,10 @@ class EchonetLiteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for ECHONET Lite.
 
     ConfigFlow handles network interface selection only.
-    Other options are managed in OptionsFlow.
     """
 
     VERSION = 1
     MINOR_VERSION = 1
-
-    @staticmethod
-    @override
-    def async_get_options_flow(
-        config_entry: EchonetLiteConfigEntry,
-    ) -> EchonetLiteOptionsFlow:
-        """Get the options flow for this handler."""
-        return EchonetLiteOptionsFlow()
 
     @override
     async def async_step_user(
@@ -89,9 +79,9 @@ class EchonetLiteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 return self._async_finish_interface_step(entry, interface)
 
-        schema = vol.Schema(
+        schema = Schema(
             {
-                vol.Optional(CONF_INTERFACE, default=current_interface): (
+                Optional(CONF_INTERFACE, default=current_interface): (
                     SelectSelector(
                         SelectSelectorConfig(
                             options=interface_options,
@@ -111,9 +101,7 @@ class EchonetLiteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Finish interface step with create or update."""
         if entry is None:
             return self.async_create_entry(
-                title="HEMS",
-                data={CONF_INTERFACE: interface},
-                options=_build_default_options(),
+                title="HEMS", data={CONF_INTERFACE: interface}
             )
         # Update interface in data; preserve existing options
         return self.async_update_reload_and_abort(
@@ -123,55 +111,10 @@ class EchonetLiteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _async_test_multicast(self, interface: str) -> str | None:
         """Test multicast socket can be created. Returns error key or None."""
         try:
-            protocol = await create_multicast_socket(interface, lambda *_: None)
+            await check_interface(interface)
         except OSError:
             return "cannot_connect"
-        try:
-            return None
-        finally:
-            protocol.close()
-
-
-class EchonetLiteOptionsFlow(config_entries.OptionsFlow):
-    """Handle options flow for ECHONET Lite.
-
-    OptionsFlow manages experimental features.
-    Network interface is configured in ConfigFlow/Reconfigure.
-    """
-
-    async def async_step_init(
-        self, user_input: Mapping[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Manage the options."""
-        if user_input is not None:
-            return self.async_create_entry(
-                title="",
-                data={
-                    CONF_ENABLE_EXPERIMENTAL: user_input.get(
-                        CONF_ENABLE_EXPERIMENTAL, False
-                    ),
-                },
-            )
-
-        current_experimental = self.config_entry.options.get(
-            CONF_ENABLE_EXPERIMENTAL, False
-        )
-
-        schema = vol.Schema(
-            {
-                vol.Optional(
-                    CONF_ENABLE_EXPERIMENTAL, default=current_experimental
-                ): bool,
-            }
-        )
-        return self.async_show_form(step_id="init", data_schema=schema)
-
-
-def _build_default_options() -> dict[str, Any]:
-    """Build default options."""
-    return {
-        CONF_ENABLE_EXPERIMENTAL: False,
-    }
+        return None
 
 
 async def _async_get_interface_options(hass: HomeAssistant) -> list[SelectOptionDict]:

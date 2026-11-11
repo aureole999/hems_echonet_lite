@@ -19,7 +19,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    DEDICATED_PLATFORM_EPCS,
+    DEDICATED_PLATFORM_REQUIRED_EPCS,
     EPC_LIGHT_COLOR,
     EPC_LIGHT_LEVEL,
     EPC_LIGHTING_MODE,
@@ -155,7 +155,7 @@ class EchonetLiteLight(EchonetLiteEntity, LightEntity):
         super().__init__(coordinator, node)
         self.entity_description = description
         self._attr_unique_id = f"{node.device_key}-{description.key}"
-        self._subscribed_epcs = DEDICATED_PLATFORM_EPCS.get(
+        self._subscribed_epcs = DEDICATED_PLATFORM_REQUIRED_EPCS.get(
             node.eoj.class_code, frozenset()
         )
 
@@ -226,36 +226,37 @@ class EchonetLiteLight(EchonetLiteEntity, LightEntity):
     @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the light on, applying any brightness/color/effect overrides."""
-        # Always send the power-on command first so subsequent setters apply
-        # to an already-powered device.
-        await self._async_send_prop(self.entity_description.op_status, True)
+        properties = [self.entity_description.op_status.make_property(True)]
         if (
             self._supports_brightness
             and (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None
         ):
             pct = _brightness_ha_to_pct(int(brightness))
-            await self._async_send_prop(
-                self.entity_description.brightness_prop, float(pct)
+            properties.append(
+                self.entity_description.brightness_prop.make_property(float(pct))
             )
         if (
             self._supports_color_temp
             and (kelvin := kwargs.get(ATTR_COLOR_TEMP_KELVIN)) is not None
         ):
-            await self._async_send_prop(
-                self.entity_description.color_prop,  # type: ignore[arg-type]
-                _closest_kelvin_key(int(kelvin)),
+            properties.append(
+                self.entity_description.color_prop.make_property(  # type: ignore[union-attr]
+                    _closest_kelvin_key(int(kelvin))
+                )
             )
         if (
             self._supports_effect
             and (effect := kwargs.get(ATTR_EFFECT)) is not None
             and effect in self.entity_description.mode_prop.options  # type: ignore[union-attr]
         ):
-            await self._async_send_prop(
-                self.entity_description.mode_prop,  # type: ignore[arg-type]
-                effect,
+            properties.append(
+                self.entity_description.mode_prop.make_property(  # type: ignore[union-attr]
+                    effect
+                )
             )
+        await self._send_properties(properties)
 
     @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the light off via the operation status codec."""
-        await self._async_send_prop(self.entity_description.op_status, False)
+        await self._send_prop(self.entity_description.op_status, False)

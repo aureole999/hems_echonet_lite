@@ -69,3 +69,8 @@ Every entity/device key added to this file must also exist in `strings.json`,
 `translations/en.json`, and `translations/ja.json`. Run
 `python scripts/validate_quirks.py` to validate the schema, translation keys,
 matching rules, and captured device decode fixtures.
+
+With pyhems 0.9.1, numeric definitions can declare `quantity` (for example
+`water_volume` or `temperature`) and `value_kind` (`measurement`, `total`,
+`cumulative`). These preserve Home Assistant device classes and statistics
+without inferring semantics from the display name.

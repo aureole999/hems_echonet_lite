@@ -6,7 +6,9 @@
       "match": {
         "class_code": "0x027C",
         "manufacturer_code": "0x00000B",
-        "product_codes": ["FC-70JR13T"]
+        "product_codes": [
+          "FC-70JR13T"
+        ]
       },
       "verified": true,
       "entities": [
@@ -23,7 +25,9 @@
           "set": "notApplicable",
           "name_en": "Hot water consumption in tank today",
           "name_ja": "本日のタンク給湯使用量",
-          "state_class": "total_increasing"
+          "state_class": "total_increasing",
+          "quantity": "water_volume",
+          "value_kind": "total"
         },
         {
           "id": "quirk_panasonic_enefarm_f3",
@@ -38,7 +42,9 @@
           "set": "notApplicable",
           "name_en": "Hot water consumption by combustion today",
           "name_ja": "本日の燃焼給湯使用量",
-          "state_class": "total_increasing"
+          "state_class": "total_increasing",
+          "quantity": "water_volume",
+          "value_kind": "total"
         },
         {
           "id": "quirk_panasonic_enefarm_f4",
@@ -50,7 +56,8 @@
           "get": "optional",
           "set": "notApplicable",
           "name_en": "Hot water level in tank",
-          "name_ja": "タンク残湯レベル"
+          "name_ja": "タンク残湯レベル",
+          "value_kind": "measurement"
         },
         {
           "id": "quirk_panasonic_enefarm_f6",
@@ -64,7 +71,9 @@
           "get": "optional",
           "set": "notApplicable",
           "name_en": "Cumulative hot water consumption in tank",
-          "name_ja": "タンク積算給湯使用量"
+          "name_ja": "タンク積算給湯使用量",
+          "quantity": "water_volume",
+          "value_kind": "cumulative"
         },
         {
           "id": "quirk_panasonic_enefarm_f7",
@@ -78,7 +87,9 @@
           "get": "optional",
           "set": "notApplicable",
           "name_en": "Cumulative other gas consumption",
-          "name_ja": "その他積算ガス使用量"
+          "name_ja": "その他積算ガス使用量",
+          "quantity": "gas_volume",
+          "value_kind": "cumulative"
         },
         {
           "id": "quirk_panasonic_enefarm_f9_raw",
@@ -110,7 +121,9 @@
           "set": "notApplicable",
           "name_en": "Bath temperature setting",
           "name_ja": "ふろ温度設定",
-          "replace_upstream": true
+          "replace_upstream": true,
+          "quantity": "temperature",
+          "value_kind": "measurement"
         },
         {
           "id": "quirk_panasonic_water_heater_f0_raw",
@@ -122,7 +135,9 @@
         }
       ],
       "behaviors": {
-        "claimed_epcs": ["0xE3"],
+        "claimed_epcs": [
+          "0xE3"
+        ],
         "water_heater": {
           "translation_key": "panasonic_bath_water_heater",
           "operation_epc": "0xE3",
@@ -152,8 +167,18 @@
           "name_ja": "動作状態",
           "settle_seconds": 20,
           "values": [
-            {"edt": "0x30", "key": "true", "name_en": "ON", "name_ja": "入"},
-            {"edt": "0x31", "key": "false", "name_en": "OFF", "name_ja": "切"}
+            {
+              "edt": "0x30",
+              "key": "true",
+              "name_en": "ON",
+              "name_ja": "入"
+            },
+            {
+              "edt": "0x31",
+              "key": "false",
+              "name_en": "OFF",
+              "name_ja": "切"
+            }
           ]
         },
         {
@@ -165,15 +190,60 @@
           "name_en": "Heating level",
           "name_ja": "暖房レベル",
           "values": [
-            {"edt": "0x31", "key": "level_1", "name_en": "Level 1", "name_ja": "レベル1"},
-            {"edt": "0x32", "key": "level_2", "name_en": "Level 2", "name_ja": "レベル2"},
-            {"edt": "0x33", "key": "level_3", "name_en": "Level 3", "name_ja": "レベル3"},
-            {"edt": "0x34", "key": "level_4", "name_en": "Level 4", "name_ja": "レベル4"},
-            {"edt": "0x35", "key": "level_5", "name_en": "Level 5", "name_ja": "レベル5"},
-            {"edt": "0x36", "key": "level_6", "name_en": "Level 6", "name_ja": "レベル6"},
-            {"edt": "0x37", "key": "level_7", "name_en": "Level 7", "name_ja": "レベル7"},
-            {"edt": "0x38", "key": "level_8", "name_en": "Level 8", "name_ja": "レベル8"},
-            {"edt": "0x39", "key": "level_9", "name_en": "Level 9", "name_ja": "レベル9"}
+            {
+              "edt": "0x31",
+              "key": "level_1",
+              "name_en": "Level 1",
+              "name_ja": "レベル1"
+            },
+            {
+              "edt": "0x32",
+              "key": "level_2",
+              "name_en": "Level 2",
+              "name_ja": "レベル2"
+            },
+            {
+              "edt": "0x33",
+              "key": "level_3",
+              "name_en": "Level 3",
+              "name_ja": "レベル3"
+            },
+            {
+              "edt": "0x34",
+              "key": "level_4",
+              "name_en": "Level 4",
+              "name_ja": "レベル4"
+            },
+            {
+              "edt": "0x35",
+              "key": "level_5",
+              "name_en": "Level 5",
+              "name_ja": "レベル5"
+            },
+            {
+              "edt": "0x36",
+              "key": "level_6",
+              "name_en": "Level 6",
+              "name_ja": "レベル6"
+            },
+            {
+              "edt": "0x37",
+              "key": "level_7",
+              "name_en": "Level 7",
+              "name_ja": "レベル7"
+            },
+            {
+              "edt": "0x38",
+              "key": "level_8",
+              "name_en": "Level 8",
+              "name_ja": "レベル8"
+            },
+            {
+              "edt": "0x39",
+              "key": "level_9",
+              "name_en": "Level 9",
+              "name_ja": "レベル9"
+            }
           ]
         }
       ]
@@ -183,7 +253,9 @@
       "match": {
         "class_code": "0x0008",
         "manufacturer_code": "0x00002F",
-        "product_codes": ["WP-2MED"]
+        "product_codes": [
+          "WP-2MED"
+        ]
       },
       "verified": true,
       "device_translation_key": "quirk_aiphone_wp_2med_visitor_sensor",
@@ -218,7 +290,9 @@
       "match": {
         "class_code": "0x0601",
         "manufacturer_code": "0x00002F",
-        "product_codes": ["WP-2MED"]
+        "product_codes": [
+          "WP-2MED"
+        ]
       },
       "verified": true,
       "device_translation_key": "quirk_aiphone_wp_2med_display"
@@ -231,14 +305,26 @@
       },
       "verified": true,
       "behaviors": {
-        "claimed_epcs": ["0xB4", "0x8F"],
+        "claimed_epcs": [
+          "0xB4",
+          "0x8F"
+        ],
         "suppress_values": [
           {
             "epc": "0xBE",
-            "dependencies": ["0x80", "0xB0"],
+            "dependencies": [
+              "0x80",
+              "0xB0"
+            ],
             "when_any": [
-              {"epc": "0x80", "equals_hex": "31"},
-              {"epc": "0xB0", "equals_hex": "45"}
+              {
+                "epc": "0x80",
+                "equals_hex": "31"
+              },
+              {
+                "epc": "0xB0",
+                "equals_hex": "45"
+              }
             ]
           }
         ],
@@ -246,15 +332,42 @@
           "target_humidity_epc": "0xB4",
           "power_saving_preset_epc": "0x8F",
           "fan_mode_labels": [
-            {"key": "auto", "label": "auto"},
-            {"key": "level_1", "label": "silent"},
-            {"key": "level_2", "label": "low"},
-            {"key": "level_3", "label": "medium low"},
-            {"key": "level_4", "label": "medium"},
-            {"key": "level_5", "label": "medium high"},
-            {"key": "level_6", "label": "high"},
-            {"key": "level_7", "label": "powerful"},
-            {"key": "level_8", "label": "level 8"}
+            {
+              "key": "auto",
+              "label": "auto"
+            },
+            {
+              "key": "level_1",
+              "label": "silent"
+            },
+            {
+              "key": "level_2",
+              "label": "low"
+            },
+            {
+              "key": "level_3",
+              "label": "medium low"
+            },
+            {
+              "key": "level_4",
+              "label": "medium"
+            },
+            {
+              "key": "level_5",
+              "label": "medium high"
+            },
+            {
+              "key": "level_6",
+              "label": "high"
+            },
+            {
+              "key": "level_7",
+              "label": "powerful"
+            },
+            {
+              "key": "level_8",
+              "label": "level 8"
+            }
           ]
         }
       }

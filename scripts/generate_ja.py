@@ -42,14 +42,14 @@ _REPO_ROOT = Path(__file__).parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from custom_components.echonet_lite.const import (  # noqa: E402
-    EXCLUDED_EPCS_BY_CLASS,
-    INSTALLATION_LOCATION_UNSET,
-    camel_to_snake,
-)
-from custom_components.echonet_lite.entity import (  # noqa: E402
+from custom_components.echonet_lite.catalog import (  # noqa: E402
+    build_catalog,
     can_process_enum_values,
     infer_platform,
+)
+from custom_components.echonet_lite.const import (  # noqa: E402
+    INSTALLATION_LOCATION_UNSET,
+    camel_to_snake,
 )
 
 # ============================================================================
@@ -182,6 +182,18 @@ def _add_entity_string(
     entity_strings.setdefault(platform, {})[entity.id] = entry
 
 
+def _binary_state(entity: EntityDefinition) -> dict[str, str]:
+    """Build switch or binary sensor state strings from normalized enum keys.
+
+    The enum value order is not significant; only the true/false keys are.
+    """
+    values = {value.key: value for value in entity.enum_values}
+    return {
+        "on": _escape_html_brackets(values["true"].name_ja),
+        "off": _escape_html_brackets(values["false"].name_ja),
+    }
+
+
 def _process_entity(
     entity_strings: dict[str, dict[str, dict[str, Any]]],
     entity: EntityDefinition,
@@ -202,16 +214,8 @@ def _process_entity(
     platform = infer_platform(entity)
 
     match platform:
-        case "binary_sensor":
-            on_text = _escape_html_brackets(entity.enum_values[0].name_ja)
-            off_text = _escape_html_brackets(entity.enum_values[1].name_ja)
-            state = {"on": on_text, "off": off_text}
-            _add_entity_string(entity_strings, "binary_sensor", entity, state)
-        case "switch":
-            on_text = _escape_html_brackets(entity.enum_values[0].name_ja)
-            off_text = _escape_html_brackets(entity.enum_values[1].name_ja)
-            state = {"on": on_text, "off": off_text}
-            _add_entity_string(entity_strings, "switch", entity, state)
+        case "binary_sensor" | "switch":
+            _add_entity_string(entity_strings, platform, entity, _binary_state(entity))
         case "button":
             _add_entity_string(entity_strings, "button", entity, None)
         case "select":
@@ -220,13 +224,13 @@ def _process_entity(
                 for ev in entity.enum_values
             }
             _add_entity_string(entity_strings, "select", entity, state)
-        case "sensor" if entity.enum_values:
+        case "sensor" if entity.enum_values and entity.temporal is None:
             state = {
                 camel_to_snake(ev.key): _escape_html_brackets(ev.name_ja)
                 for ev in entity.enum_values
             }
             _add_entity_string(entity_strings, "sensor", entity, state)
-        case "sensor" | "number":
+        case "sensor" | "number" | "date" | "time" | "datetime":
             _add_entity_string(entity_strings, platform, entity, None)
 
 
@@ -251,12 +255,10 @@ def generate_ja(registry: DefinitionsRegistry) -> dict[str, Any]:
     """
     entity_strings: dict[str, dict[str, dict[str, Any]]] = {}
 
-    for class_code, entity_defs in registry.entities.items():
-        excluded = EXCLUDED_EPCS_BY_CLASS.get(class_code, frozenset())
-        for entity in entity_defs:
-            if entity.epc in excluded:
-                continue
-            _process_entity(entity_strings, entity)
+    # Use the same entity selection as the platforms (catalog.py).
+    for entries in build_catalog(registry).values():
+        for entry in entries:
+            _process_entity(entity_strings, entry.entity_def)
 
     # Load static file
     with STRINGS_STATIC_JA_FILE.open(encoding="utf-8") as f:

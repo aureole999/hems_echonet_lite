@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
-from pyhems import DeviceManager, Frame, HemsFrameEvent, get_codec
+from pyhems import DeviceManager, Frame, HemsFrameEvent, NodeState, PropertiesChanged, get_codec
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPAT_PATH = ROOT / "custom_components" / "echonet_lite" / "pyhems_compat.py"
@@ -87,10 +87,18 @@ def _validate_aiphone_push_updates() -> None:
         client=SimpleNamespace(),
         monitored_epcs={0x0008: frozenset({0xB1})},
     )
-    managed_node = SimpleNamespace(properties={0xB1: b"\x42"})
+    managed_node = NodeState(
+        eoj=Frame.decode(bytes.fromhex("108100000008010EF0017302B10141F10504BBE00100")).seoj,
+        properties={0xB1: b"\x42"}, node_id=node_id,
+        manufacturer_code=0x00002F, get_epcs=frozenset({0xB1}),
+        set_epcs=frozenset(), inf_epcs=frozenset({0xB1}),
+        poll_epcs=frozenset(), fast_poll_epcs=frozenset(),
+        product_code="WP-2MED", serial_number=None,
+    )
     manager.data[device_key] = managed_node
     updated_device_keys: list[str] = []
-    manager.on_device_updated(updated_device_keys.append)
+    manager.subscribe(lambda event: updated_device_keys.append(event.device_key)
+                      if isinstance(event, PropertiesChanged) else None)
 
     frames = (
         # Captured door-station press: B1=0x41, F1 carries related vendor data.
@@ -106,7 +114,7 @@ def _validate_aiphone_push_updates() -> None:
             node_id=node_id,
             eoj=frame.seoj,
         )
-        if not manager.process_frame_event(event):
+        if not asyncio.run(manager.process_frame_event(event)):
             raise ValueError("AIPHONE WP-2MED INF frame did not update device state")
 
     if updated_device_keys != [device_key, device_key]:

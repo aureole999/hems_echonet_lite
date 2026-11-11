@@ -1,6 +1,7 @@
 {
   "domain": "echonet_lite",
   "name": "HEMS ECHONET Lite Custom",
+  "categories": ["energy", "hubs_protocols.smart_home_hubs", "climate"],
   "codeowners": ["@aureole999", "@sayurin"],
   "config_flow": true,
   "dependencies": ["network"],
@@ -10,7 +11,7 @@
   "issue_tracker": "https://github.com/aureole999/hems_echonet_lite/issues",
   "loggers": ["pyhems"],
   "quality_scale": "silver",
-  "requirements": ["pyhems==0.8.8"],
+  "requirements": ["pyhems==0.9.1"],
   "single_config_entry": true,
   "version": "2026.9.2"
 }

@@ -22,7 +22,7 @@ from .entity import (
     build_platform_descriptions,
     setup_common_platform,
 )
-from .prop import NumericProp
+from .prop import DurationProp, NumericProp
 from .runtime import EchonetLiteConfigEntry
 
 PARALLEL_UPDATES = 0
@@ -41,15 +41,28 @@ class EchonetLiteNumberEntityDescription(
 ):
     """Entity description with EPC metadata for number entities."""
 
-    prop: NumericProp
+    prop: NumericProp | DurationProp
 
     @classmethod
     @override
     def build_from_entity_def(
         cls,
+        class_code: int,
         entity_def: EntityDefinition,
     ) -> EchonetLiteNumberEntityDescription:
         """Construct a number description from an EntityDefinition."""
+        if entity_def.temporal is not None:
+            prop = DurationProp.from_entity_def(entity_def)
+            return cls(
+                key=f"{entity_def.epc:02x}_0",
+                device_class=NumberDeviceClass.DURATION,
+                native_unit_of_measurement=prop.unit,
+                native_min_value=0,
+                native_max_value=prop.maximum,
+                native_step=1,
+                prop=prop,
+                **cls._common_kwargs(entity_def),
+            )
         return cls(
             key=f"{entity_def.epc:02x}_{entity_def.byte_offset}",
             device_class=_infer_device_class(entity_def),
@@ -67,7 +80,7 @@ class EchonetLiteNumberEntityDescription(
             native_step=entity_def.multiple_of
             if entity_def.multiple_of != 1.0
             else None,
-            prop=NumericProp.from_entity_def(entity_def),
+            prop=NumericProp.from_entity_def(entity_def, class_code=class_code),
             **cls._common_kwargs(entity_def),
         )
 
@@ -115,4 +128,4 @@ class EchonetLiteNumber(
     @override
     async def async_set_native_value(self, value: float) -> None:
         """Set the value by sending an ECHONET Lite command."""
-        await self._async_send_prop(self.description.prop, value)
+        await self._send_prop(self.description.prop, value)

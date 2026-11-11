@@ -40,6 +40,9 @@ from .runtime import EchonetLiteConfigEntry
 
 PARALLEL_UPDATES = 0
 
+# The pyhems installation location support is a simplified 1-byte format
+# implementation (pyhems ADR-0010); updates are rare, so one lock serializes
+# the read-modify-write of both select entities across all devices.
 _INSTALLATION_LOCATION_LOCK = asyncio.Lock()
 
 
@@ -55,6 +58,7 @@ class EchonetLiteSelectEntityDescription(
     @override
     def build_from_entity_def(
         cls,
+        class_code: int,
         entity_def: EntityDefinition,
     ) -> EchonetLiteSelectEntityDescription:
         """Construct a select description from an EntityDefinition."""
@@ -120,7 +124,7 @@ class EchonetLiteSelect(
     async def async_select_option(self, option: str) -> None:
         """Select the given option by sending the corresponding payload."""
         try:
-            await self._async_send_prop(self.description.prop, option)
+            await self._send_prop(self.description.prop, option)
         except ValueError as err:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
@@ -218,14 +222,14 @@ class InstallationLocationCodeSelect(EchonetLiteEntity, SelectEntity):
             if new_llll == 0:
                 # "unset" selected — write 0x00; forcing NNN=0 avoids generating
                 # the prohibited 0x01-0x07 range (17-byte format indicators).
-                await self._async_send_property(EPC_INSTALLATION_LOCATION, b"\x00")
+                await self._send_property(EPC_INSTALLATION_LOCATION, b"\x00")
                 return
             fields = _decode_location_fields(self._node)
             nnn = fields[1] if fields is not None else 0
             edt = InstallationLocationCodec().encode(
                 InstallationLocation.from_code(new_llll, nnn)
             )
-            await self._async_send_property(EPC_INSTALLATION_LOCATION, edt)
+            await self._send_property(EPC_INSTALLATION_LOCATION, edt)
 
 
 class InstallationLocationNumberSelect(EchonetLiteEntity, SelectEntity):
@@ -284,4 +288,4 @@ class InstallationLocationNumberSelect(EchonetLiteEntity, SelectEntity):
             edt = InstallationLocationCodec().encode(
                 InstallationLocation.from_code(llll, new_nnn)
             )
-            await self._async_send_property(EPC_INSTALLATION_LOCATION, edt)
+            await self._send_property(EPC_INSTALLATION_LOCATION, edt)

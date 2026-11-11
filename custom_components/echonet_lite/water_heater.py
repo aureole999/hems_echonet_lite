@@ -18,12 +18,12 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    DEDICATED_PLATFORM_EPCS,
+    DEDICATED_PLATFORM_REQUIRED_EPCS,
     DOMAIN,
     EPC_MEASURED_WATER_TEMPERATURE,
     EPC_OPERATION_MODE,
@@ -119,7 +119,7 @@ class EchonetLiteQuirkWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
     """Water-heater aggregate assembled from a matching quirk profile."""
 
     _attr_name = None
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_precision: float = PRECISION_WHOLE
 
     def __init__(
@@ -145,7 +145,7 @@ class EchonetLiteQuirkWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
                     f"Water-heater profile {quirk.profile_id!r} has no local "
                     f"definition for temperature EPC 0x{quirk.temperature_epc:02X}"
                 )
-            self._temperature_prop = NumericProp.from_entity_def(definition)
+            self._temperature_prop = NumericProp.from_entity_def(definition, class_code=node.eoj.class_code)
 
         self._attr_translation_key = quirk.translation_key
         self._attr_unique_id = f"{node.device_key}-quirk_water_heater"
@@ -181,7 +181,7 @@ class EchonetLiteQuirkWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
 
     @property
     @override
-    def target_temperature(self) -> float | None:
+    def native_target_temperature(self) -> float | None:
         """Expose a read-only temperature setting when the device reports one."""
         if self._temperature_prop is None:
             return None
@@ -190,19 +190,19 @@ class EchonetLiteQuirkWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
 
     @property
     @override
-    def current_temperature(self) -> None:
+    def native_current_temperature(self) -> None:
         """Return no measured temperature; E1 is a setting, not a measurement."""
         return None
 
     @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Enable the configured operation."""
-        await self._async_send_prop(self._operation_prop, True)
+        await self._send_prop(self._operation_prop, True)
 
     @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable the configured operation."""
-        await self._async_send_prop(self._operation_prop, False)
+        await self._send_prop(self._operation_prop, False)
 
     @override
     async def async_set_operation_mode(self, operation_mode: str) -> None:
@@ -224,7 +224,7 @@ class EchonetLiteWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
 
     entity_description: EchonetLiteWaterHeaterEntityDescription
     _attr_name = None
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_precision: float = PRECISION_WHOLE
     _attr_translation_key = _TRANSLATION_KEY
 
@@ -238,7 +238,7 @@ class EchonetLiteWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
         super().__init__(coordinator, node)
         self.entity_description = description
         self._attr_unique_id = f"{node.device_key}-{description.key}"
-        self._subscribed_epcs = DEDICATED_PLATFORM_EPCS.get(
+        self._subscribed_epcs = DEDICATED_PLATFORM_REQUIRED_EPCS.get(
             node.eoj.class_code, frozenset()
         )
         if description.target_temp_prop.min_value is not None:
@@ -260,11 +260,8 @@ class EchonetLiteWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
         )
         if EPC_OPERATION_MODE in node.set_epcs:
             features |= WaterHeaterEntityFeature.OPERATION_MODE
-            # Preserve the EDT-byte order so the UI lists modes in the
-            # order defined by the ECHONET Lite specification.
-            operation_list.extend(
-                k for k, _ in sorted(description.op_mode.codec.by_key.items())
-            )
+            # Preserve the order defined by pyhems.
+            operation_list.extend(description.op_mode.options)
 
         self._attr_supported_features = features
         self._attr_operation_list = operation_list
@@ -299,14 +296,14 @@ class EchonetLiteWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
 
     @property
     @override
-    def current_temperature(self) -> float | None:
+    def native_current_temperature(self) -> float | None:
         """Return the measured water temperature."""
         value = self.entity_description.current_temp_prop.get(self._node)
         return float(value) if value is not None else None
 
     @property
     @override
-    def target_temperature(self) -> float | None:
+    def native_target_temperature(self) -> float | None:
         """Return the configured target water temperature."""
         value = self.entity_description.target_temp_prop.get(self._node)
         return float(value) if value is not None else None
@@ -314,24 +311,12 @@ class EchonetLiteWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
     @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the water heater."""
-        if EPC_OPERATION_STATUS not in self._node.set_epcs:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="epc_not_writable",
-                translation_placeholders={"epc_list": f"0x{EPC_OPERATION_STATUS:02X}"},
-            )
-        await self._async_send_prop(self.entity_description.op_status, True)
+        await self._send_prop(self.entity_description.op_status, True)
 
     @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the water heater."""
-        if EPC_OPERATION_STATUS not in self._node.set_epcs:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="epc_not_writable",
-                translation_placeholders={"epc_list": f"0x{EPC_OPERATION_STATUS:02X}"},
-            )
-        await self._async_send_prop(self.entity_description.op_status, False)
+        await self._send_prop(self.entity_description.op_status, False)
 
     @override
     async def async_set_operation_mode(self, operation_mode: str) -> None:
@@ -345,16 +330,10 @@ class EchonetLiteWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
                 translation_key="unsupported_value",
                 translation_placeholders={"value": operation_mode},
             )
-        if EPC_OPERATION_MODE not in self._node.set_epcs:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="epc_not_writable",
-                translation_placeholders={"epc_list": f"0x{EPC_OPERATION_MODE:02X}"},
-            )
         properties = [self.entity_description.op_mode.make_property(operation_mode)]
         if EPC_OPERATION_STATUS in self._node.set_epcs:
             properties.append(self.entity_description.op_status.make_property(True))
-        await self._async_send_properties(properties)
+        await self._send_properties(properties)
 
     @override
     async def async_set_temperature(self, **kwargs: Any) -> None:
@@ -364,14 +343,6 @@ class EchonetLiteWaterHeater(EchonetLiteEntity, WaterHeaterEntity):
                 translation_domain=DOMAIN,
                 translation_key="target_temperature_required",
             )
-        if EPC_TARGET_TEMPERATURE not in self._node.set_epcs:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="epc_not_writable",
-                translation_placeholders={
-                    "epc_list": f"0x{EPC_TARGET_TEMPERATURE:02X}"
-                },
-            )
         temperature = float(kwargs[ATTR_TEMPERATURE])
         clamped = min(max(temperature, self._attr_min_temp), self._attr_max_temp)
-        await self._async_send_prop(self.entity_description.target_temp_prop, clamped)
+        await self._send_prop(self.entity_description.target_temp_prop, clamped)

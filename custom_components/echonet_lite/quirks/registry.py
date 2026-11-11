@@ -20,6 +20,8 @@ from pyhems import (
     EnumValue,
     NodeState,
     PropertyRole,
+    Quantity,
+    ValueKind,
 )
 
 
@@ -403,8 +405,8 @@ class QuirkRegistry:
             epc=_code(raw["epc"], maximum=0xFF, field="epc"),
             name_en=str(raw["name_en"]),
             name_ja=str(raw["name_ja"]),
-            get=get_access,
-            set=set_access,
+            readable=get_access != "notApplicable",
+            writable=set_access != "notApplicable",
             format=mra_format,
             unit=raw.get("unit"),
             minimum=raw.get("minimum"),
@@ -413,6 +415,8 @@ class QuirkRegistry:
             enum_values=enum_values,
             manufacturer_code=match.manufacturer_code,
             role=PropertyRole(raw.get("role", "primary")),
+            quantity=Quantity(raw["quantity"]) if raw.get("quantity") else None,
+            value_kind=ValueKind(raw["value_kind"]) if raw.get("value_kind") else None,
         )
 
     @staticmethod

@@ -131,13 +131,19 @@
     },
     "water_heater": {
       "electric_water_heater": {
+        "state": {
+          "auto": "自動沸き上げ",
+          "manual_heating": "手動沸き上げ",
+          "manual_no_heating": "手動沸き上げ停止",
+          "off": "OFF"
+        },
         "state_attributes": {
           "operation_mode": {
             "state": {
-              "auto": "自動沸き上げ",
-              "manual_heating": "手動沸き上げ",
-              "manual_no_heating": "手動沸き上げ停止",
-              "off": "OFF"
+              "auto": "[%key:component::echonet_lite::entity::water_heater::electric_water_heater::state::auto%]",
+              "manual_heating": "[%key:component::echonet_lite::entity::water_heater::electric_water_heater::state::manual_heating%]",
+              "manual_no_heating": "[%key:component::echonet_lite::entity::water_heater::electric_water_heater::state::manual_no_heating%]",
+              "off": "[%key:component::echonet_lite::entity::water_heater::electric_water_heater::state::off%]"
             }
           }
         }
@@ -145,6 +151,9 @@
     }
   },
   "exceptions": {
+    "invalid_property_value": {
+      "message": "デバイスで表現できない値です: {error}"
+    },
     "epc_not_writable": {
       "message": "EPC {epc_list} はデバイスによって書き込みできません。"
     },
@@ -153,6 +162,9 @@
     },
     "runtime_start_failed": {
       "message": "ランタイムクライアントの起動に失敗しました: {error}"
+    },
+    "set_failed": {
+      "message": "対象デバイスは要求された値を受け付けませんでした。拒否されたEPC: {rejected_epcs}、応答がなかったEPC: {unanswered_epcs}。"
     },
     "target_node_unknown": {
       "message": "対象ノードのアドレスが不明です。"
@@ -172,18 +184,6 @@
     "runtime_inactive": {
       "description": "ECHONET Liteデバイスから{minutes}分以上フレームを受信していません。デバイスがオフラインであるか、ネットワークに問題がある可能性があります。ECHONET Liteデバイスの電源が入っており、ネットワークに接続されていることを確認してください。",
       "title": "ECHONET Liteデバイスが応答していません"
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "data": {
-          "enable_experimental": "実験的なデバイスクラスを有効にする"
-        },
-        "data_description": {
-          "enable_experimental": "有効にすると、実機での検証が行われていないデバイスクラスも登録されます。正しく動作しない場合があります。"
-        }
-      }
     }
   }
 }
