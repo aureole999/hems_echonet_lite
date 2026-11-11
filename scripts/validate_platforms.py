@@ -8,8 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import asyncio, importlib
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
-from pyhems import NodeState, EOJ, REGISTRY
-from homeassistant.const import Platform
+from pyhems import NodeState, EOJ
 from custom_components.echonet_lite import (
     catalog,
     sensor,
@@ -17,8 +16,6 @@ from custom_components.echonet_lite import (
     climate,
     water_heater,
 )
-from custom_components.echonet_lite.quirks import QUIRKS
-from custom_components.echonet_lite.const import infer_device_classes
 
 for name in (
     "binary_sensor",
