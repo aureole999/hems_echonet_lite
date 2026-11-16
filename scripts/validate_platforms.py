@@ -127,7 +127,7 @@ n = node(
 )
 c = coordinator()
 a = climate.EchonetLiteClimate(c, n, climate._DESCRIPTIONS[0x0130])
-assert a.translation_key == "toshiba_climate"
+assert a.translation_key == "climate"
 assert a.fan_modes == ["auto", "low", "middle", "medium", "high", "powerful"]
 assert a.target_humidity == 50 and a.fan_mode == "low"
 asyncio.run(a.async_set_fan_mode("low"))
@@ -158,6 +158,32 @@ assert c.device_manager.set_properties.call_args.kwargs["properties"][0].edt == 
 asyncio.run(a.async_set_preset_mode("away"))
 assert c.device_manager.set_properties.call_args.kwargs["properties"][0].epc == 0x8F
 print("Toshiba: fan labels, humidity, presets and write API pass")
+
+# Sensor entities must read description.epc for suppression and raw EDT attributes.
+n_off = node(0x0130, 0x000069, properties={0x80: b"\x31", 0xB0: b"\x42", 0xBE: b"\x14"})
+n_cool = node(0x0130, 0x000069, properties={0x80: b"\x30", 0xB0: b"\x42", 0xBE: b"\x14"})
+be_desc = description(sensor, n_cool, "class_0130_epc_be")
+assert sensor.EchonetLiteSensor(c, n_off, be_desc).native_value is None
+assert sensor.EchonetLiteSensor(c, n_cool, be_desc).native_value == 20
+n_raw = node(0x027C, 0x00000B, "FC-70JR13T", {0xF9: b"\x2A"})
+raw_desc = next(
+    desc
+    for desc in sensor._RAW_DESCRIPTIONS[0x027C]
+    if desc.translation_key == "quirk_panasonic_enefarm_f9_raw"
+    and desc.should_create(n_raw)
+)
+raw_entity = sensor.EchonetLiteRawSensor(c, n_raw, raw_desc)
+assert raw_entity.native_value == "0x2A"
+assert raw_entity.extra_state_attributes == {
+    "raw_length": 1,
+    "raw_unsigned": 42,
+    "expected_length": 1,
+    "length_matches": True,
+}
+n_raw_missing = node(0x027C, 0x00000B, "FC-70JR13T", {})
+raw_missing = sensor.EchonetLiteRawSensor(c, n_raw_missing, raw_desc)
+assert raw_missing.native_value is None and raw_missing.extra_state_attributes == {}
+print("Sensors: suppression and raw diagnostic attributes pass")
 print(
     "All integration platforms imported under Home Assistant 2026.11.0 and pyhems 0.9.1"
 )

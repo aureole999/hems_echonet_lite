@@ -329,7 +329,6 @@
           }
         ],
         "climate": {
-          "translation_key": "toshiba_climate",
           "strict_fan_modes": true,
           "target_humidity_epc": "0xB4",
           "power_saving_preset_epc": "0x8F",

@@ -147,8 +147,6 @@ def main() -> None:
         required_translation_keys.update(sensor.id for sensor in profile.raw_sensors)
         if profile.device_translation_key is not None:
             required_translation_keys.add(profile.device_translation_key)
-        if profile.climate is not None and profile.climate.translation_key is not None:
-            required_translation_keys.add(profile.climate.translation_key)
         if profile.water_heater is not None:
             required_translation_keys.add(profile.water_heater.translation_key)
 
@@ -247,11 +245,6 @@ def main() -> None:
         raise ValueError("Missing Toshiba climate quirk")
     if not toshiba_climate.strict_fan_modes:
         raise ValueError("Toshiba climate quirk did not enable strict_fan_modes")
-    if toshiba_climate.translation_key != "toshiba_climate":
-        raise ValueError(
-            "Unexpected Toshiba climate translation_key: "
-            f"{toshiba_climate.translation_key!r}"
-        )
     if toshiba_climate.fan_mode_labels != expected_toshiba_labels:
         raise ValueError(
             "Unexpected Toshiba fan_mode_labels: "
@@ -264,7 +257,7 @@ def main() -> None:
         fan_states = (
             data.get("entity", {})
             .get("climate", {})
-            .get("toshiba_climate", {})
+            .get("climate", {})
             .get("state_attributes", {})
             .get("fan_mode", {})
             .get("state", {})
@@ -273,7 +266,7 @@ def main() -> None:
         if missing_states:
             missing_text = ", ".join(sorted(missing_states))
             raise ValueError(
-                f"{path}: missing toshiba_climate fan_mode states: {missing_text}"
+                f"{path}: missing climate fan_mode states: {missing_text}"
             )
 
     print(

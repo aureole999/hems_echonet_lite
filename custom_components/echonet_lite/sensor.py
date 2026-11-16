@@ -232,7 +232,7 @@ class EchonetLiteSensor(
     @override
     def native_value(self) -> float | int | str | date | datetime | None:
         """Return the state of the sensor."""
-        if QUIRKS.should_suppress_value(self._node, self._epc):
+        if QUIRKS.should_suppress_value(self._node, self.description.epc):
             return None
         return self.description.prop.get(self._node)
 
@@ -246,15 +246,15 @@ class EchonetLiteRawSensor(
     @override
     def native_value(self) -> str | None:
         """Return the complete EDT as uppercase hexadecimal text."""
-        edt = self._node.properties.get(self._epc)
+        edt = self._node.properties.get(self.description.epc)
         return None if edt is None else f"0x{edt.hex().upper()}"
 
     @property
     @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Expose byte length and unsigned interpretation for observation."""
-        attributes: dict[str, Any] = dict(super().extra_state_attributes)
-        edt = self._node.properties.get(self._epc)
+        attributes: dict[str, Any] = dict(super().extra_state_attributes or {})
+        edt = self._node.properties.get(self.description.epc)
         if edt is None:
             return attributes
         attributes["raw_length"] = len(edt)

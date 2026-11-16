@@ -18,7 +18,7 @@
       }
     },
     "climate": {
-      "toshiba_climate": {
+      "climate": {
         "state_attributes": {
           "fan_mode": {
             "state": {
