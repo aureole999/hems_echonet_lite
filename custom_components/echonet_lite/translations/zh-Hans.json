@@ -16,6 +16,22 @@
           "on": "检测到访客"
         }
       }
+    },
+    "climate": {
+      "toshiba_climate": {
+        "state_attributes": {
+          "fan_mode": {
+            "state": {
+              "auto": "自动",
+              "low": "静音",
+              "middle": "微风",
+              "medium": "弱风",
+              "high": "强风",
+              "powerful": "强劲"
+            }
+          }
+        }
+      }
     }
   }
 }

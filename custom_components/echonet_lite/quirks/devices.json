@@ -329,6 +329,8 @@
           }
         ],
         "climate": {
+          "translation_key": "toshiba_climate",
+          "strict_fan_modes": true,
           "target_humidity_epc": "0xB4",
           "power_saving_preset_epc": "0x8F",
           "fan_mode_labels": [
@@ -337,36 +339,24 @@
               "label": "auto"
             },
             {
-              "key": "level_1",
-              "label": "silent"
-            },
-            {
               "key": "level_2",
               "label": "low"
             },
             {
               "key": "level_3",
-              "label": "medium low"
-            },
-            {
-              "key": "level_4",
-              "label": "medium"
+              "label": "middle"
             },
             {
               "key": "level_5",
-              "label": "medium high"
-            },
-            {
-              "key": "level_6",
-              "label": "high"
+              "label": "medium"
             },
             {
               "key": "level_7",
-              "label": "powerful"
+              "label": "high"
             },
             {
               "key": "level_8",
-              "label": "level 8"
+              "label": "powerful"
             }
           ]
         }

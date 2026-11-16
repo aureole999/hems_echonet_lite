@@ -225,6 +225,8 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
         self._target_humidity_prop: NumericProp | None = None
         self._power_saving_prop: BinaryProp | None = None
         if self._climate_quirk is not None:
+            if self._climate_quirk.translation_key is not None:
+                self._attr_translation_key = self._climate_quirk.translation_key
             if self._climate_quirk.target_humidity_epc is not None:
                 self._target_humidity_prop = NumericProp.from_registry(
                     node.eoj.class_code,
@@ -259,18 +261,19 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
                 self._fan_key_to_label = {
                     key: label for key, label in configured if key in protocol_options
                 }
-                self._fan_key_to_label.update(
-                    (key, key)
-                    for key in protocol_options
-                    if key not in self._fan_key_to_label
-                )
                 self._attr_fan_modes = [
                     label for key, label in configured if key in self._fan_key_to_label
-                ] + [
-                    key
-                    for key in protocol_options
-                    if key not in {item[0] for item in configured}
                 ]
+                if not self._climate_quirk.strict_fan_modes:
+                    self._fan_key_to_label.update(
+                        (key, key)
+                        for key in protocol_options
+                        if key not in self._fan_key_to_label
+                    )
+                    configured_keys = {item[0] for item in configured}
+                    self._attr_fan_modes.extend(
+                        key for key in protocol_options if key not in configured_keys
+                    )
             else:
                 self._fan_key_to_label = {key: key for key in protocol_options}
                 self._attr_fan_modes = protocol_options
@@ -343,7 +346,11 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
     def fan_mode(self) -> str | None:
         """Return the current fan mode."""
         key = self.entity_description.fan_mode_prop.get(self._node)
-        return self._fan_key_to_label.get(key, key) if key is not None else None
+        if key is None:
+            return None
+        if self._climate_quirk and self._climate_quirk.strict_fan_modes:
+            return self._fan_key_to_label.get(key)
+        return self._fan_key_to_label.get(key, key)
 
     @property
     @override
@@ -444,8 +451,14 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
     @override
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set the fan mode."""
-        protocol_key = self._fan_label_to_key.get(fan_mode, fan_mode)
-        if protocol_key not in self.entity_description.fan_mode_prop.options:
+        if self._climate_quirk and self._climate_quirk.strict_fan_modes:
+            protocol_key = self._fan_label_to_key.get(fan_mode)
+        else:
+            protocol_key = self._fan_label_to_key.get(fan_mode, fan_mode)
+        if (
+            protocol_key is None
+            or protocol_key not in self.entity_description.fan_mode_prop.options
+        ):
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="unsupported_value",

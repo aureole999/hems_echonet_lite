@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import asyncio, importlib
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from homeassistant.exceptions import ServiceValidationError
 from pyhems import NodeState, EOJ
 from custom_components.echonet_lite import (
     catalog,
@@ -116,7 +117,7 @@ n = node(
     0x000069,
     properties={
         0x80: b"\x30",
-        0xA0: b"\x31",
+        0xA0: b"\x32",
         0xB0: b"\x42",
         0xB3: b"\x19",
         0xB4: b"\x32",
@@ -126,9 +127,32 @@ n = node(
 )
 c = coordinator()
 a = climate.EchonetLiteClimate(c, n, climate._DESCRIPTIONS[0x0130])
-assert a.target_humidity == 50 and a.fan_mode == "silent"
-asyncio.run(a.async_set_fan_mode("silent"))
-assert c.device_manager.set_properties.call_args.kwargs["properties"][0].edt == b"\x31"
+assert a.translation_key == "toshiba_climate"
+assert a.fan_modes == ["auto", "low", "middle", "medium", "high", "powerful"]
+assert a.target_humidity == 50 and a.fan_mode == "low"
+asyncio.run(a.async_set_fan_mode("low"))
+assert c.device_manager.set_properties.call_args.kwargs["properties"][0].edt == b"\x32"
+n_unmapped = node(
+    0x0130,
+    0x000069,
+    properties={0x80: b"\x30", 0xA0: b"\x31", 0xB0: b"\x42"},
+    writable={0xA0},
+)
+a_unmapped = climate.EchonetLiteClimate(c, n_unmapped, climate._DESCRIPTIONS[0x0130])
+assert a_unmapped.fan_mode is None
+for invalid_mode in ("level_1", "silent"):
+    try:
+        asyncio.run(a.async_set_fan_mode(invalid_mode))
+    except ServiceValidationError:
+        pass
+    else:
+        raise AssertionError(f"Expected ServiceValidationError for {invalid_mode!r}")
+a_generic = climate.EchonetLiteClimate(
+    c,
+    node(0x0130, 0x000000, properties={0x80: b"\x30", 0xA0: b"\x31"}, writable={0xA0}),
+    climate._DESCRIPTIONS[0x0130],
+)
+assert a_generic.translation_key == "climate" and a_generic.fan_mode == "level_1"
 asyncio.run(a.async_set_humidity(55))
 assert c.device_manager.set_properties.call_args.kwargs["properties"][0].edt == b"\x37"
 asyncio.run(a.async_set_preset_mode("away"))

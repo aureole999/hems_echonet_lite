@@ -20,6 +20,9 @@ TRANSLATION_PATHS = (
     ROOT / "custom_components" / "echonet_lite" / "translations" / "en.json",
     ROOT / "custom_components" / "echonet_lite" / "translations" / "ja.json",
 )
+ZH_HANS_PATH = (
+    ROOT / "custom_components" / "echonet_lite" / "translations" / "zh-Hans.json"
+)
 
 
 def _load_module(name: str, path: Path) -> ModuleType:
@@ -144,6 +147,8 @@ def main() -> None:
         required_translation_keys.update(sensor.id for sensor in profile.raw_sensors)
         if profile.device_translation_key is not None:
             required_translation_keys.add(profile.device_translation_key)
+        if profile.climate is not None and profile.climate.translation_key is not None:
+            required_translation_keys.add(profile.climate.translation_key)
         if profile.water_heater is not None:
             required_translation_keys.add(profile.water_heater.translation_key)
 
@@ -228,6 +233,48 @@ def main() -> None:
         raise ValueError("Toshiba outdoor temperature was not suppressed in fan mode")
     if registry.should_suppress_value(toshiba_cool, 0xBE):
         raise ValueError("Toshiba outdoor temperature was suppressed while cooling")
+
+    toshiba_climate = registry.climate_for(toshiba_cool)
+    expected_toshiba_labels = (
+        ("auto", "auto"),
+        ("level_2", "low"),
+        ("level_3", "middle"),
+        ("level_5", "medium"),
+        ("level_7", "high"),
+        ("level_8", "powerful"),
+    )
+    if toshiba_climate is None:
+        raise ValueError("Missing Toshiba climate quirk")
+    if not toshiba_climate.strict_fan_modes:
+        raise ValueError("Toshiba climate quirk did not enable strict_fan_modes")
+    if toshiba_climate.translation_key != "toshiba_climate":
+        raise ValueError(
+            "Unexpected Toshiba climate translation_key: "
+            f"{toshiba_climate.translation_key!r}"
+        )
+    if toshiba_climate.fan_mode_labels != expected_toshiba_labels:
+        raise ValueError(
+            "Unexpected Toshiba fan_mode_labels: "
+            f"{toshiba_climate.fan_mode_labels!r}"
+        )
+
+    expected_fan_states = {label for _key, label in expected_toshiba_labels}
+    for path in (*TRANSLATION_PATHS, ZH_HANS_PATH):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        fan_states = (
+            data.get("entity", {})
+            .get("climate", {})
+            .get("toshiba_climate", {})
+            .get("state_attributes", {})
+            .get("fan_mode", {})
+            .get("state", {})
+        )
+        missing_states = expected_fan_states - set(fan_states)
+        if missing_states:
+            missing_text = ", ".join(sorted(missing_states))
+            raise ValueError(
+                f"{path}: missing toshiba_climate fan_mode states: {missing_text}"
+            )
 
     print(
         f"Validated {len(registry.profiles)} quirk profiles and "

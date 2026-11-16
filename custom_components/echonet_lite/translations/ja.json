@@ -686,6 +686,20 @@
             }
           }
         }
+      },
+      "toshiba_climate": {
+        "state_attributes": {
+          "fan_mode": {
+            "state": {
+              "auto": "自動",
+              "low": "静か",
+              "middle": "微",
+              "medium": "弱",
+              "high": "強",
+              "powerful": "パワフル"
+            }
+          }
+        }
       }
     },
     "date": {
