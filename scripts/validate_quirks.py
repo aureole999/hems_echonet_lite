@@ -147,6 +147,8 @@ def main() -> None:
         required_translation_keys.update(sensor.id for sensor in profile.raw_sensors)
         if profile.device_translation_key is not None:
             required_translation_keys.add(profile.device_translation_key)
+        if profile.climate is not None and profile.climate.translation_key is not None:
+            required_translation_keys.add(profile.climate.translation_key)
         if profile.water_heater is not None:
             required_translation_keys.add(profile.water_heater.translation_key)
 
@@ -245,6 +247,11 @@ def main() -> None:
         raise ValueError("Missing Toshiba climate quirk")
     if not toshiba_climate.strict_fan_modes:
         raise ValueError("Toshiba climate quirk did not enable strict_fan_modes")
+    if toshiba_climate.translation_key != "toshiba_climate":
+        raise ValueError(
+            "Unexpected Toshiba climate translation_key: "
+            f"{toshiba_climate.translation_key!r}"
+        )
     if toshiba_climate.fan_mode_labels != expected_toshiba_labels:
         raise ValueError(
             "Unexpected Toshiba fan_mode_labels: "
@@ -252,12 +259,32 @@ def main() -> None:
         )
 
     expected_fan_states = {label for _key, label in expected_toshiba_labels}
+    expected_upstream_climate_states = {
+        "auto",
+        *(f"level_{level}" for level in range(1, 9)),
+    }
     for path in (*TRANSLATION_PATHS, ZH_HANS_PATH):
         data = json.loads(path.read_text(encoding="utf-8"))
+        climate_section = data.get("entity", {}).get("climate", {})
+        if path == ZH_HANS_PATH:
+            if "climate" in climate_section:
+                raise ValueError(
+                    f"{path}: unexpected shared climate override in zh-Hans.json"
+                )
+        else:
+            upstream_states = set(
+                climate_section.get("climate", {})
+                .get("state_attributes", {})
+                .get("fan_mode", {})
+                .get("state", {})
+            )
+            if upstream_states != expected_upstream_climate_states:
+                raise ValueError(
+                    f"{path}: shared climate fan_mode states modified: "
+                    f"{sorted(upstream_states)}"
+                )
         fan_states = (
-            data.get("entity", {})
-            .get("climate", {})
-            .get("climate", {})
+            climate_section.get("toshiba_climate", {})
             .get("state_attributes", {})
             .get("fan_mode", {})
             .get("state", {})
@@ -266,7 +293,7 @@ def main() -> None:
         if missing_states:
             missing_text = ", ".join(sorted(missing_states))
             raise ValueError(
-                f"{path}: missing climate fan_mode states: {missing_text}"
+                f"{path}: missing toshiba_climate fan_mode states: {missing_text}"
             )
 
     print(

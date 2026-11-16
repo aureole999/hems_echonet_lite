@@ -127,7 +127,7 @@ n = node(
 )
 c = coordinator()
 a = climate.EchonetLiteClimate(c, n, climate._DESCRIPTIONS[0x0130])
-assert a.translation_key == "climate"
+assert a.translation_key == "toshiba_climate"
 assert a.fan_modes == ["auto", "low", "middle", "medium", "high", "powerful"]
 assert a.target_humidity == 50 and a.fan_mode == "low"
 asyncio.run(a.async_set_fan_mode("low"))

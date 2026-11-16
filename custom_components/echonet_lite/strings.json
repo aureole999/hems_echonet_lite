@@ -880,7 +880,16 @@
               "level_5": "[%key:component::echonet_lite::common::level_5%]",
               "level_6": "[%key:component::echonet_lite::common::level_6%]",
               "level_7": "[%key:component::echonet_lite::common::level_7%]",
-              "level_8": "[%key:component::echonet_lite::common::level_8%]",
+              "level_8": "[%key:component::echonet_lite::common::level_8%]"
+            }
+          }
+        }
+      },
+      "toshiba_climate": {
+        "state_attributes": {
+          "fan_mode": {
+            "state": {
+              "auto": "[%key:common::state::auto%]",
               "low": "Silent",
               "middle": "Low",
               "medium": "Medium",

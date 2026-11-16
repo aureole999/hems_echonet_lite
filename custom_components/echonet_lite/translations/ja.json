@@ -682,7 +682,16 @@
               "level_5": "レベル5",
               "level_6": "レベル6",
               "level_7": "レベル7",
-              "level_8": "レベル8",
+              "level_8": "レベル8"
+            }
+          }
+        }
+      },
+      "toshiba_climate": {
+        "state_attributes": {
+          "fan_mode": {
+            "state": {
+              "auto": "自動",
               "low": "静か",
               "middle": "微",
               "medium": "弱",

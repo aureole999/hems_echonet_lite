@@ -225,6 +225,8 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
         self._target_humidity_prop: NumericProp | None = None
         self._power_saving_prop: BinaryProp | None = None
         if self._climate_quirk is not None:
+            if self._climate_quirk.translation_key is not None:
+                self._attr_translation_key = self._climate_quirk.translation_key
             if self._climate_quirk.target_humidity_epc is not None:
                 self._target_humidity_prop = NumericProp.from_registry(
                     node.eoj.class_code,

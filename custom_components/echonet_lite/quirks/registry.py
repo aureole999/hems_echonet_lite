@@ -121,6 +121,7 @@ class ClimateQuirk:
     target_humidity_epc: int | None = None
     power_saving_preset_epc: int | None = None
     fan_mode_labels: tuple[tuple[str, str], ...] = ()
+    translation_key: str | None = None
     strict_fan_modes: bool = False
 
     @property
@@ -479,6 +480,11 @@ class QuirkRegistry:
                 else None
             ),
             fan_mode_labels=labels,
+            translation_key=(
+                str(raw["translation_key"])
+                if raw.get("translation_key") is not None
+                else None
+            ),
             strict_fan_modes=bool(raw.get("strict_fan_modes", False)),
         )
 
