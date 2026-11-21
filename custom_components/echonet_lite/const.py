@@ -31,7 +31,6 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
 )
 
-
 DOMAIN = "echonet_lite"
 CONF_INTERFACE = "interface"
 DEFAULT_INTERFACE = "0.0.0.0"
@@ -59,7 +58,6 @@ RUNTIME_MONITOR_MAX_SILENCE = timedelta(minutes=5)
 # Common (super class, 0x80-0x9F) EPCs.
 EPC_OPERATION_STATUS = 0x80
 EPC_INSTALLATION_LOCATION = 0x81
-EPC_POWER_SAVING = 0x8F
 
 # Class-specific EPCs used by the climate / fan platforms.
 # 0xA0 has different semantic names per class (fan speed for HOME AC,
@@ -71,7 +69,6 @@ EPC_SWING_AIR_FLOW = 0xA3
 EPC_SPECIAL_STATE = 0xAA
 EPC_OPERATION_MODE = 0xB0
 EPC_TARGET_TEMPERATURE = 0xB3
-EPC_TARGET_HUMIDITY = 0xB4
 EPC_ROOM_HUMIDITY = 0xBA
 EPC_ROOM_TEMPERATURE = 0xBB
 EPC_MEASURED_WATER_TEMPERATURE = 0xC1

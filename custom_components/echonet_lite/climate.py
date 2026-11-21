@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any, override
 
-from pyhems import NodeState
+from pyhems import DeviceClass, NodeState
 
 from homeassistant.components.climate import (
     ATTR_TEMPERATURE,
@@ -18,10 +18,9 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.climate.const import PRESET_AWAY, PRESET_HOME
 from homeassistant.const import Platform, UnitOfTemperature
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
@@ -39,8 +38,7 @@ from .const import (
 from .coordinator import EchonetLiteCoordinator
 from .entity import EchonetLiteEntity, setup_dedicated_platform
 from .prop import BinaryProp, EnumProp, NumericProp
-from .pyhems_compat import DeviceClass
-from .quirks import QUIRKS, ClimateQuirk
+from .quirks.climate import quirk_climate
 from .runtime import EchonetLiteConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -187,7 +185,7 @@ async def async_setup_entry(
         async_add_entities,
         Platform.CLIMATE.value,
         _DESCRIPTIONS,
-        EchonetLiteClimate,
+        quirk_climate(EchonetLiteClimate),
     )
 
 
@@ -221,24 +219,6 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
         """Initialize an ECHONET Lite climate entity."""
         super().__init__(coordinator, node)
         self.entity_description = description
-        self._climate_quirk: ClimateQuirk | None = QUIRKS.climate_for(node)
-        self._target_humidity_prop: NumericProp | None = None
-        self._power_saving_prop: BinaryProp | None = None
-        if self._climate_quirk is not None:
-            if self._climate_quirk.translation_key is not None:
-                self._attr_translation_key = self._climate_quirk.translation_key
-            if self._climate_quirk.target_humidity_epc is not None:
-                self._target_humidity_prop = NumericProp.from_registry(
-                    node.eoj.class_code,
-                    self._climate_quirk.target_humidity_epc,
-                )
-            if self._climate_quirk.power_saving_preset_epc is not None:
-                self._power_saving_prop = BinaryProp.from_registry(
-                    node.eoj.class_code,
-                    self._climate_quirk.power_saving_preset_epc,
-                )
-        self._fan_key_to_label: dict[str, str] = {}
-        self._fan_label_to_key: dict[str, str] = {}
         self._attr_unique_id = f"{node.device_key}-{description.key}"
         self._subscribed_epcs = DEDICATED_PLATFORM_REQUIRED_EPCS.get(
             node.eoj.class_code, frozenset()
@@ -255,55 +235,13 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
             features |= ClimateEntityFeature.TARGET_TEMPERATURE
         if EPC_FAN_SPEED in node.set_epcs:
             features |= ClimateEntityFeature.FAN_MODE
-            protocol_options = description.fan_mode_prop.options
-            if self._climate_quirk and self._climate_quirk.fan_mode_labels:
-                configured = self._climate_quirk.fan_mode_labels
-                self._fan_key_to_label = {
-                    key: label for key, label in configured if key in protocol_options
-                }
-                self._attr_fan_modes = [
-                    label for key, label in configured if key in self._fan_key_to_label
-                ]
-                if not self._climate_quirk.strict_fan_modes:
-                    self._fan_key_to_label.update(
-                        (key, key)
-                        for key in protocol_options
-                        if key not in self._fan_key_to_label
-                    )
-                    configured_keys = {item[0] for item in configured}
-                    self._attr_fan_modes.extend(
-                        key for key in protocol_options if key not in configured_keys
-                    )
-            else:
-                self._fan_key_to_label = {key: key for key in protocol_options}
-                self._attr_fan_modes = protocol_options
-            self._fan_label_to_key = {
-                label: key for key, label in self._fan_key_to_label.items()
-            }
+            self._attr_fan_modes = description.fan_mode_prop.options
         if EPC_SWING_AIR_FLOW in node.set_epcs:
             features |= ClimateEntityFeature.SWING_MODE
             swing_modes = list(_HA_TO_PYHEMS_SWING)
         if EPC_OPERATION_STATUS in node.set_epcs:
             features |= ClimateEntityFeature.TURN_ON
             features |= ClimateEntityFeature.TURN_OFF
-        if self._climate_quirk is not None:
-            humidity_epc = self._climate_quirk.target_humidity_epc
-            if humidity_epc is not None:
-                if humidity_epc in node.get_epcs or humidity_epc in node.set_epcs:
-                    self._subscribed_epcs |= {humidity_epc}
-                if humidity_epc in node.set_epcs:
-                    features |= ClimateEntityFeature.TARGET_HUMIDITY
-
-            power_saving_epc = self._climate_quirk.power_saving_preset_epc
-            if power_saving_epc is not None:
-                if (
-                    power_saving_epc in node.get_epcs
-                    or power_saving_epc in node.set_epcs
-                ):
-                    self._subscribed_epcs |= {power_saving_epc}
-                if power_saving_epc in node.set_epcs:
-                    features |= ClimateEntityFeature.PRESET_MODE
-                    self._attr_preset_modes = [PRESET_HOME, PRESET_AWAY]
         self._attr_supported_features = features
         self._attr_swing_modes = swing_modes
 
@@ -345,32 +283,7 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
     @override
     def fan_mode(self) -> str | None:
         """Return the current fan mode."""
-        key = self.entity_description.fan_mode_prop.get(self._node)
-        if key is None:
-            return None
-        if self._climate_quirk and self._climate_quirk.strict_fan_modes:
-            return self._fan_key_to_label.get(key)
-        return self._fan_key_to_label.get(key, key)
-
-    @property
-    @override
-    def target_humidity(self) -> float | None:
-        """Return the configured target humidity for matching devices."""
-        if self._target_humidity_prop is None:
-            return None
-        value = self._target_humidity_prop.get(self._node)
-        return float(value) if value is not None else None
-
-    @property
-    @override
-    def preset_mode(self) -> str | None:
-        """Map the power-saving flag to standard Home/Away presets."""
-        if self._power_saving_prop is None:
-            return None
-        enabled = self._power_saving_prop.get(self._node)
-        if enabled is None:
-            return None
-        return PRESET_AWAY if enabled else PRESET_HOME
+        return self.entity_description.fan_mode_prop.get(self._node)
 
     @property
     @override
@@ -451,79 +364,13 @@ class EchonetLiteClimate(EchonetLiteEntity, ClimateEntity):
     @override
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set the fan mode."""
-        if self._climate_quirk and self._climate_quirk.strict_fan_modes:
-            protocol_key = self._fan_label_to_key.get(fan_mode)
-        else:
-            protocol_key = self._fan_label_to_key.get(fan_mode, fan_mode)
-        if (
-            protocol_key is None
-            or protocol_key not in self.entity_description.fan_mode_prop.options
-        ):
+        if fan_mode not in self.entity_description.fan_mode_prop.options:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="unsupported_value",
                 translation_placeholders={"value": fan_mode},
             )
-        await self._send_prop(self.entity_description.fan_mode_prop, protocol_key)
-
-    @override
-    async def async_set_humidity(self, humidity: int) -> None:
-        """Set target humidity through a configured vendor feature."""
-        humidity_epc = (
-            None
-            if self._climate_quirk is None
-            else self._climate_quirk.target_humidity_epc
-        )
-        if (
-            self._target_humidity_prop is None
-            or humidity_epc not in self._node.set_epcs
-        ):
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="epc_not_writable",
-                translation_placeholders={
-                    "epc_list": (
-                        "not configured"
-                        if humidity_epc is None
-                        else f"0x{humidity_epc:02X}"
-                    )
-                },
-            )
-        await self._send_prop(self._target_humidity_prop, float(humidity))
-
-    @override
-    async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Set Home/Away by toggling power-saving operation."""
-        if preset_mode not in {PRESET_HOME, PRESET_AWAY}:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key="unsupported_value",
-                translation_placeholders={"value": preset_mode},
-            )
-        power_saving_epc = (
-            None
-            if self._climate_quirk is None
-            else self._climate_quirk.power_saving_preset_epc
-        )
-        if (
-            self._power_saving_prop is None
-            or power_saving_epc not in self._node.set_epcs
-        ):
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="epc_not_writable",
-                translation_placeholders={
-                    "epc_list": (
-                        "not configured"
-                        if power_saving_epc is None
-                        else f"0x{power_saving_epc:02X}"
-                    )
-                },
-            )
-        await self._send_prop(
-            self._power_saving_prop,
-            preset_mode == PRESET_AWAY,
-        )
+        await self._send_prop(self.entity_description.fan_mode_prop, fan_mode)
 
     @override
     async def async_set_swing_mode(self, swing_mode: str) -> None:

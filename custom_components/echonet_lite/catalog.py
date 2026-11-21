@@ -18,7 +18,7 @@ from pyhems import (
 
 from homeassistant.const import Platform
 
-from .quirks import QUIRKS
+from .quirks import QUIRKS as REGISTRY  # upstream definitions plus local quirks
 
 from .const import (
     COLLECTION_SENSOR_PROJECTIONS,
@@ -171,7 +171,7 @@ def build_catalog(
     }
 
 
-CATALOG: Final[dict[int, tuple[CatalogEntry, ...]]] = build_catalog(QUIRKS)
+CATALOG: Final[dict[int, tuple[CatalogEntry, ...]]] = build_catalog(REGISTRY)
 
 
 def _entry_epcs(entry: CatalogEntry) -> frozenset[int]:
@@ -204,8 +204,8 @@ def _collection_projection_epcs(class_code: int) -> frozenset[int]:
 def _build_class_epcs() -> dict[int, frozenset[int]]:
     class_codes = (
         set(CATALOG)
-        | set(QUIRKS.monitored_epcs)
         | set(DEDICATED_PLATFORM_REQUIRED_EPCS)
+        | set(REGISTRY.monitored_epcs)
         | {projection.class_code for projection in COLLECTION_SENSOR_PROJECTIONS}
     )
     return {
@@ -217,8 +217,8 @@ def _build_class_epcs() -> dict[int, frozenset[int]]:
             )
         )
         | DEDICATED_PLATFORM_REQUIRED_EPCS.get(class_code, frozenset())
+        | REGISTRY.monitored_epcs.get(class_code, frozenset())
         | {EPC_INSTALLATION_LOCATION}
-        | QUIRKS.monitored_epcs.get(class_code, frozenset())
         | _collection_projection_epcs(class_code)
         for class_code in class_codes
     }
@@ -263,7 +263,7 @@ def monitored_epcs_for(class_code: int, manufacturer_code: int) -> frozenset[int
 # derive a role from. Only monitored EPCs are kept.
 def _build_fast_poll_epcs() -> dict[int, frozenset[int]]:
     result: dict[int, frozenset[int]] = {}
-    for class_code, entity_defs in QUIRKS.entities.items():
+    for class_code, entity_defs in REGISTRY.entities.items():
         monitored = CLASS_EPCS.get(class_code, frozenset()).union(
             *(
                 epcs

@@ -1,0 +1,12 @@
+{
+  "config": {
+    "step": {
+      "reconfigure": {
+        "title": "Reconfigure HEMS ECHONET Lite Custom"
+      },
+      "user": {
+        "title": "Set up HEMS ECHONET Lite Custom"
+      }
+    }
+  }
+}

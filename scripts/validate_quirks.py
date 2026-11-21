@@ -5,23 +5,28 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
-import json
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
-from pyhems import DeviceManager, Frame, HemsFrameEvent, NodeState, PropertiesChanged, get_codec
+from pyhems import (
+    DeviceClass,
+    DeviceManager,
+    Frame,
+    HemsFrameEvent,
+    NodeState,
+    PropertiesChanged,
+    get_codec,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
-COMPAT_PATH = ROOT / "custom_components" / "echonet_lite" / "pyhems_compat.py"
 REGISTRY_PATH = ROOT / "custom_components" / "echonet_lite" / "quirks" / "registry.py"
-TRANSLATION_PATHS = (
-    ROOT / "custom_components" / "echonet_lite" / "strings.json",
-    ROOT / "custom_components" / "echonet_lite" / "translations" / "en.json",
-    ROOT / "custom_components" / "echonet_lite" / "translations" / "ja.json",
-)
-ZH_HANS_PATH = (
-    ROOT / "custom_components" / "echonet_lite" / "translations" / "zh-Hans.json"
+TRANSLATIONS_PATH = ROOT / "scripts" / "quirk_translations.py"
+TRANSLATION_FILES = (
+    "strings.json",
+    "translations/en.json",
+    "translations/ja.json",
+    "translations/zh-Hans.json",
 )
 
 
@@ -44,44 +49,6 @@ def _translation_keys(data: dict) -> set[str]:
     return keys
 
 
-def _validate_discovery_compat(compat: ModuleType) -> None:
-    """Validate both released and development pyhems discovery surfaces."""
-
-    class ReleasedClient:
-        probe_calls = 0
-
-        async def probe_nodes(self) -> bool:
-            self.probe_calls += 1
-            return True
-
-    class DevelopmentClient(ReleasedClient):
-        initial_probe_calls = 0
-        periodic_start_calls = 0
-
-        async def probe_initial_nodes(self) -> bool:
-            self.initial_probe_calls += 1
-            return True
-
-        def start_periodic_discovery(self) -> None:
-            self.periodic_start_calls += 1
-
-    released = ReleasedClient()
-    if not asyncio.run(compat.async_probe_initial_nodes(released)):
-        raise ValueError("Released pyhems discovery compatibility probe failed")
-    compat.start_periodic_discovery(released)
-    if released.probe_calls != 1:
-        raise ValueError("Released pyhems did not use probe_nodes exactly once")
-
-    development = DevelopmentClient()
-    if not asyncio.run(compat.async_probe_initial_nodes(development)):
-        raise ValueError("Development pyhems initial discovery probe failed")
-    compat.start_periodic_discovery(development)
-    if development.initial_probe_calls != 1 or development.probe_calls != 0:
-        raise ValueError("Development pyhems did not prefer probe_initial_nodes")
-    if development.periodic_start_calls != 1:
-        raise ValueError("Development pyhems periodic discovery was not started")
-
-
 def _validate_aiphone_push_updates() -> None:
     """Replay captured WP-2MED INF frames through DeviceManager."""
     node_id = "00112233445566778899AABBCCDDEEFF"
@@ -91,17 +58,29 @@ def _validate_aiphone_push_updates() -> None:
         monitored_epcs={0x0008: frozenset({0xB1})},
     )
     managed_node = NodeState(
-        eoj=Frame.decode(bytes.fromhex("108100000008010EF0017302B10141F10504BBE00100")).seoj,
-        properties={0xB1: b"\x42"}, node_id=node_id,
-        manufacturer_code=0x00002F, get_epcs=frozenset({0xB1}),
-        set_epcs=frozenset(), inf_epcs=frozenset({0xB1}),
-        poll_epcs=frozenset(), fast_poll_epcs=frozenset(),
-        product_code="WP-2MED", serial_number=None,
+        eoj=Frame.decode(
+            bytes.fromhex("108100000008010EF0017302B10141F10504BBE00100")
+        ).seoj,
+        properties={0xB1: b"\x42"},
+        node_id=node_id,
+        manufacturer_code=0x00002F,
+        get_epcs=frozenset({0xB1}),
+        set_epcs=frozenset(),
+        inf_epcs=frozenset({0xB1}),
+        poll_epcs=frozenset(),
+        fast_poll_epcs=frozenset(),
+        product_code="WP-2MED",
+        serial_number=None,
     )
     manager.data[device_key] = managed_node
     updated_device_keys: list[str] = []
-    manager.subscribe(lambda event: updated_device_keys.append(event.device_key)
-                      if isinstance(event, PropertiesChanged) else None)
+    manager.subscribe(
+        lambda event: (
+            updated_device_keys.append(event.device_key)
+            if isinstance(event, PropertiesChanged)
+            else None
+        )
+    )
 
     frames = (
         # Captured door-station press: B1=0x41, F1 carries related vendor data.
@@ -128,13 +107,13 @@ def _validate_aiphone_push_updates() -> None:
 
 def main() -> None:
     """Validate schema, translations, and captured real-device decode fixtures."""
-    compat = _load_module("echonet_pyhems_compat", COMPAT_PATH)
-    _validate_discovery_compat(compat)
     _validate_aiphone_push_updates()
-    device_class = compat.DeviceClass
+    device_class = DeviceClass
     registry = _load_module("echonet_quirk_registry", REGISTRY_PATH).QUIRKS
     unknown_class_codes = {
-        int(class_code) for class_code in device_class if class_code not in registry.entities
+        int(class_code)
+        for class_code in device_class
+        if class_code not in registry.entities
     }
     if unknown_class_codes:
         codes = ", ".join(f"0x{code:04X}" for code in sorted(unknown_class_codes))
@@ -152,8 +131,12 @@ def main() -> None:
         if profile.water_heater is not None:
             required_translation_keys.add(profile.water_heater.translation_key)
 
-    for path in TRANSLATION_PATHS:
-        data = json.loads(path.read_text(encoding="utf-8"))
+    # Fork strings are merged into upstream translations when packaging.
+    translations = _load_module(
+        "echonet_quirk_translations", TRANSLATIONS_PATH
+    ).merged_translations()
+    for path in TRANSLATION_FILES:
+        data = translations[path]
         missing = required_translation_keys - _translation_keys(data)
         if missing:
             missing_text = ", ".join(sorted(missing))
@@ -162,7 +145,7 @@ def main() -> None:
     # Captured read-only responses from Panasonic FC-70JR13T / 0x027201.
     fixtures = (
         ("panasonic_enefarm_fc_70jr13t", 0xF2, "0000", 0),
-        ("panasonic_enefarm_fc_70jr13t", 0xF6, "001edc15", 20224.21),
+        ("panasonic_enefarm_fc_70jr13t", 0xF6, "001edc15", 2022.421),
         ("panasonic_enefarm_fc_70jr13t", 0xF7, "001721c9", 1515.977),
         ("panasonic_instantaneous_water_heater", 0xE1, "26", 38),
     )
@@ -254,8 +237,7 @@ def main() -> None:
         )
     if toshiba_climate.fan_mode_labels != expected_toshiba_labels:
         raise ValueError(
-            "Unexpected Toshiba fan_mode_labels: "
-            f"{toshiba_climate.fan_mode_labels!r}"
+            f"Unexpected Toshiba fan_mode_labels: {toshiba_climate.fan_mode_labels!r}"
         )
 
     expected_fan_states = {label for _key, label in expected_toshiba_labels}
@@ -263,10 +245,10 @@ def main() -> None:
         "auto",
         *(f"level_{level}" for level in range(1, 9)),
     }
-    for path in (*TRANSLATION_PATHS, ZH_HANS_PATH):
-        data = json.loads(path.read_text(encoding="utf-8"))
+    for path in TRANSLATION_FILES:
+        data = translations[path]
         climate_section = data.get("entity", {}).get("climate", {})
-        if path == ZH_HANS_PATH:
+        if path == "translations/zh-Hans.json":
             if "climate" in climate_section:
                 raise ValueError(
                     f"{path}: unexpected shared climate override in zh-Hans.json"

@@ -23,11 +23,11 @@
           "scale": 1,
           "get": "optional",
           "set": "notApplicable",
-          "name_en": "Hot water consumption in tank today",
-          "name_ja": "本日のタンク給湯使用量",
-          "state_class": "total_increasing",
+          "name_en": "Fuel cell hot water use today",
+          "name_ja": "本日の燃料電池お湯使用量",
+          "name_zh": "今日燃料电池热水用量",
           "quantity": "water_volume",
-          "value_kind": "total"
+          "value_kind": "cumulative"
         },
         {
           "id": "quirk_panasonic_enefarm_f3",
@@ -40,11 +40,11 @@
           "scale": 1,
           "get": "optional",
           "set": "notApplicable",
-          "name_en": "Hot water consumption by combustion today",
-          "name_ja": "本日の燃焼給湯使用量",
-          "state_class": "total_increasing",
+          "name_en": "Backup heater hot water use today",
+          "name_ja": "本日の補助熱源お湯使用量",
+          "name_zh": "今日辅助热源热水用量",
           "quantity": "water_volume",
-          "value_kind": "total"
+          "value_kind": "cumulative"
         },
         {
           "id": "quirk_panasonic_enefarm_f4",
@@ -57,6 +57,7 @@
           "set": "notApplicable",
           "name_en": "Hot water level in tank",
           "name_ja": "タンク残湯レベル",
+          "name_zh": "储水箱余量等级",
           "value_kind": "measurement"
         },
         {
@@ -64,15 +65,16 @@
           "epc": "0xF6",
           "type": "numeric",
           "format": "uint32",
-          "unit": "L",
+          "unit": "MJ",
           "minimum": 0,
           "maximum": 4294967293,
-          "scale": 0.01,
+          "scale": 0.001,
           "get": "optional",
           "set": "notApplicable",
-          "name_en": "Cumulative hot water consumption in tank",
-          "name_ja": "タンク積算給湯使用量",
-          "quantity": "water_volume",
+          "name_en": "Fuel cell exhaust heat recovery",
+          "name_ja": "燃料電池排熱回収量",
+          "name_zh": "燃料电池排热回收量",
+          "quantity": "energy",
           "value_kind": "cumulative"
         },
         {
@@ -86,8 +88,9 @@
           "scale": 0.001,
           "get": "optional",
           "set": "notApplicable",
-          "name_en": "Cumulative other gas consumption",
-          "name_ja": "その他積算ガス使用量",
+          "name_en": "Backup heater gas consumption",
+          "name_ja": "補助熱源ガス使用量",
+          "name_zh": "辅助热源燃气用量",
           "quantity": "gas_volume",
           "value_kind": "cumulative"
         },
@@ -97,7 +100,8 @@
           "type": "raw",
           "expected_length": 1,
           "name_en": "Unknown property F9",
-          "name_ja": "未解析プロパティ F9"
+          "name_ja": "未解析プロパティ F9",
+          "name_zh": "未解析属性 F9"
         }
       ]
     },
@@ -121,6 +125,7 @@
           "set": "notApplicable",
           "name_en": "Bath temperature setting",
           "name_ja": "ふろ温度設定",
+          "name_zh": "浴缸温度设置",
           "replace_upstream": true,
           "quantity": "temperature",
           "value_kind": "measurement"
@@ -131,7 +136,8 @@
           "type": "raw",
           "expected_length": 1,
           "name_en": "Unknown property F0",
-          "name_ja": "未解析プロパティ F0"
+          "name_ja": "未解析プロパティ F0",
+          "name_zh": "未解析属性 F0"
         }
       ],
       "behaviors": {
@@ -144,7 +150,16 @@
           "operation_on_edt": "0x41",
           "operation_off_edt": "0x42",
           "operation_on_key": "bath_auto",
-          "temperature_epc": "0xE1"
+          "temperature_epc": "0xE1",
+          "name_en": "Bath water heater",
+          "name_ja": "ふろ給湯器",
+          "name_zh": "浴缸热水器",
+          "operation_on_name_en": "Bath auto",
+          "operation_on_name_ja": "ふろ自動",
+          "operation_on_name_zh": "浴缸自动",
+          "operation_off_name_en": "Off",
+          "operation_off_name_ja": "OFF",
+          "operation_off_name_zh": "关"
         }
       }
     },
@@ -156,6 +171,9 @@
       },
       "verified": true,
       "device_translation_key": "quirk_panasonic_floor_heater",
+      "device_name_en": "Floor heater",
+      "device_name_ja": "床暖房",
+      "device_name_zh": "地暖",
       "entities": [
         {
           "id": "quirk_panasonic_floor_power",
@@ -165,19 +183,22 @@
           "set": "optional",
           "name_en": "Operation status",
           "name_ja": "動作状態",
+          "name_zh": "运行状态",
           "settle_seconds": 20,
           "values": [
             {
               "edt": "0x30",
               "key": "true",
-              "name_en": "ON",
-              "name_ja": "入"
+              "name_en": "On",
+              "name_ja": "入",
+              "name_zh": "开"
             },
             {
               "edt": "0x31",
               "key": "false",
-              "name_en": "OFF",
-              "name_ja": "切"
+              "name_en": "Off",
+              "name_ja": "切",
+              "name_zh": "关"
             }
           ]
         },
@@ -189,60 +210,70 @@
           "set": "notApplicable",
           "name_en": "Heating level",
           "name_ja": "暖房レベル",
+          "name_zh": "加热档位",
           "values": [
             {
               "edt": "0x31",
               "key": "level_1",
               "name_en": "Level 1",
-              "name_ja": "レベル1"
+              "name_ja": "レベル1",
+              "name_zh": "1 档"
             },
             {
               "edt": "0x32",
               "key": "level_2",
               "name_en": "Level 2",
-              "name_ja": "レベル2"
+              "name_ja": "レベル2",
+              "name_zh": "2 档"
             },
             {
               "edt": "0x33",
               "key": "level_3",
               "name_en": "Level 3",
-              "name_ja": "レベル3"
+              "name_ja": "レベル3",
+              "name_zh": "3 档"
             },
             {
               "edt": "0x34",
               "key": "level_4",
               "name_en": "Level 4",
-              "name_ja": "レベル4"
+              "name_ja": "レベル4",
+              "name_zh": "4 档"
             },
             {
               "edt": "0x35",
               "key": "level_5",
               "name_en": "Level 5",
-              "name_ja": "レベル5"
+              "name_ja": "レベル5",
+              "name_zh": "5 档"
             },
             {
               "edt": "0x36",
               "key": "level_6",
               "name_en": "Level 6",
-              "name_ja": "レベル6"
+              "name_ja": "レベル6",
+              "name_zh": "6 档"
             },
             {
               "edt": "0x37",
               "key": "level_7",
               "name_en": "Level 7",
-              "name_ja": "レベル7"
+              "name_ja": "レベル7",
+              "name_zh": "7 档"
             },
             {
               "edt": "0x38",
               "key": "level_8",
               "name_en": "Level 8",
-              "name_ja": "レベル8"
+              "name_ja": "レベル8",
+              "name_zh": "8 档"
             },
             {
               "edt": "0x39",
               "key": "level_9",
               "name_en": "Level 9",
-              "name_ja": "レベル9"
+              "name_ja": "レベル9",
+              "name_zh": "9 档"
             }
           ]
         }
@@ -259,6 +290,9 @@
       },
       "verified": true,
       "device_translation_key": "quirk_aiphone_wp_2med_visitor_sensor",
+      "device_name_en": "AIPHONE WP-2MED visitor sensor",
+      "device_name_ja": "アイホン WP-2MED 来客センサー",
+      "device_name_zh": "AIPHONE WP-2MED 访客传感器",
       "entities": [
         {
           "id": "quirk_aiphone_visitor_call",
@@ -266,20 +300,23 @@
           "type": "enum",
           "get": "optional",
           "set": "notApplicable",
-          "name_en": "Visitor occupancy",
+          "name_en": "Visitor call",
           "name_ja": "来客呼出",
+          "name_zh": "访客呼叫",
           "values": [
             {
               "edt": "0x41",
               "key": "true",
               "name_en": "Visitor detected",
-              "name_ja": "来客あり"
+              "name_ja": "来客あり",
+              "name_zh": "检测到访客"
             },
             {
               "edt": "0x42",
               "key": "false",
               "name_en": "Clear",
-              "name_ja": "来客なし"
+              "name_ja": "来客なし",
+              "name_zh": "无人呼叫"
             }
           ]
         }
@@ -295,7 +332,10 @@
         ]
       },
       "verified": true,
-      "device_translation_key": "quirk_aiphone_wp_2med_display"
+      "device_translation_key": "quirk_aiphone_wp_2med_display",
+      "device_name_en": "AIPHONE WP-2MED display",
+      "device_name_ja": "アイホン WP-2MED モニター",
+      "device_name_zh": "AIPHONE WP-2MED 显示器"
     },
     {
       "id": "toshiba_home_air_conditioner",
@@ -336,27 +376,45 @@
           "fan_mode_labels": [
             {
               "key": "auto",
-              "label": "auto"
+              "label": "auto",
+              "name_en": "Auto",
+              "name_ja": "自動",
+              "name_zh": "自动"
             },
             {
               "key": "level_2",
-              "label": "low"
+              "label": "low",
+              "name_en": "Silent",
+              "name_ja": "静か",
+              "name_zh": "静音"
             },
             {
               "key": "level_3",
-              "label": "middle"
+              "label": "middle",
+              "name_en": "Low",
+              "name_ja": "微",
+              "name_zh": "微风"
             },
             {
               "key": "level_5",
-              "label": "medium"
+              "label": "medium",
+              "name_en": "Medium",
+              "name_ja": "弱",
+              "name_zh": "弱风"
             },
             {
               "key": "level_7",
-              "label": "high"
+              "label": "high",
+              "name_en": "High",
+              "name_ja": "強",
+              "name_zh": "强风"
             },
             {
               "key": "level_8",
-              "label": "powerful"
+              "label": "powerful",
+              "name_en": "Powerful",
+              "name_ja": "パワフル",
+              "name_zh": "强劲"
             }
           ]
         }

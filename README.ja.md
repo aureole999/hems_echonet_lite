@@ -32,7 +32,6 @@
 
 | クラスコード | 機器 | HA プラットフォーム |
 |------------|------|------------------|
-| 0x0008 | アイホン WP-2MED 来客センサー | Binary Sensor |
 | 0x0130 | 家庭用エアコン | Climate |
 | 0x0135 | 空気清浄機 | Fan |
 | 0x0263 | 電動雨戸・シャッター | Cover |
@@ -58,7 +57,6 @@
 | 0x03BB | 炊飯器 |
 | 0x05FD | スイッチ（JEM-A/HA端子対応） |
 | 0x05FF | コントローラ |
-| 0x0601 | アイホン WP-2MED モニター |
 
 ## 対応機能
 
@@ -183,22 +181,6 @@ ECHONET Lite 仕様の範囲を超えて、特定のメーカー向けにプロ�
 | 瞬時買電電力 | W | 0xF3 |
 | 積算売電電力量 | Wh | 0xF4 |
 | 積算買電電力量 | Wh | 0xF5 |
-
-### このフォークのローカルデバイス Quirk
-
-家庭内機器固有の拡張は
-[`custom_components/echonet_lite/quirks/devices.json`](custom_components/echonet_lite/quirks/devices.json)
-に分離しています。pyhems の定義を優先し、不足する EPC だけをローカル定義で補完するため、
-将来 pyhems が同じ EPC を正式対応した場合は原則として上流定義へ自動的に移行します。
-
-現在、Panasonic Ene-Farm `FC-70JR13T`、Panasonic 瞬間式給湯器、
-Panasonic ユーザー定義床暖房 (0x0F70)、AIPHONE WP-2MED の来客センサー
-(0x0008) とモニター (0x0601)、および Toshiba エアコンの拡張を収録しています。
-WP-2MED の来客呼出はマルチキャスト INF 通知からリアルタイムに反映されます。
-F9 と F0 は意味を推測せず、観察用の raw 診断センサーとして公開します。
-
-定義を変更した後は、Home Assistant を再起動する前に
-`python scripts/validate_quirks.py` を実行してください。
 
 ## データ更新
 

@@ -1,0 +1,68 @@
+# Fork release: tag vX.Y.Z and attach a HACS archive built by
+# scripts/fork_build.py. Upstream's release.yml (release-please) stays
+# unchanged in this repository and is disabled in the fork's Actions settings.
+name: Fork release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version part to increase
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version-file: .python-version
+      - name: Install validation dependencies
+        run: |
+          python -m pip install "$(python scripts/fork_build.py --requirement)" \
+            "homeassistant==$(jq -r .homeassistant hacs.json)"
+      - name: Validate quirks and platforms
+        run: |
+          python scripts/validate_quirks.py
+          python scripts/validate_platforms.py
+      - name: Compute version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          version="$(python scripts/fork_build.py --next-version "$BUMP")"
+          if git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "::error::Tag v$version already exists"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Build HACS archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: python scripts/fork_build.py --version "$VERSION"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" dist/echonet_lite.zip \
+            --target "$GITHUB_SHA" --title "v$VERSION" --generate-notes

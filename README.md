@@ -1,4 +1,4 @@
-# HEMS ECHONET Lite Custom for Home Assistant
+# HEMS Echonet Lite Integration for Home Assistant
 
 [![HACS](https://img.shields.io/badge/hacs-default-blue)](https://hacs.xyz/)
 [![Quality Scale](https://img.shields.io/github/manifest-json/quality_scale/sayurin/hems_echonet_lite?filename=custom_components/echonet_lite/manifest.json&label=quality+scale&color=mediumpurple)](https://www.home-assistant.io/docs/quality_scale/)
@@ -32,7 +32,6 @@ Device classes are processed automatically when they are discovered:
 
 | Class Code | Device | HA Platform |
 |------------|--------|-------------|
-| 0x0008 | AIPHONE WP-2MED Visitor Sensor | Binary Sensor |
 | 0x0130 | Home Air Conditioner | Climate |
 | 0x0135 | Air Cleaner | Fan |
 | 0x0263 | Electrically operated rain sliding door/shutter | Cover |
@@ -58,7 +57,6 @@ Device classes are processed automatically when they are discovered:
 | 0x03BB | Rice Cooker |
 | 0x05FD | Switch (JEM-A/HA terminals) |
 | 0x05FF | Controller |
-| 0x0601 | AIPHONE WP-2MED Display |
 
 ## Supported Functionality
 
@@ -187,32 +185,6 @@ Sharp home energy controllers expose grid buy/sell data via manufacturer-specifi
 | Cumulative Electric Energy Sold | Wh | 0xF4 |
 | Cumulative Electric Energy Bought | Wh | 0xF5 |
 
-### Local device quirks in this fork
-
-This fork keeps household-specific extensions in
-[`custom_components/echonet_lite/quirks/devices.json`](custom_components/echonet_lite/quirks/devices.json).
-The upstream pyhems registry remains authoritative: local definitions fill gaps
-by default and automatically yield when a future pyhems release defines the
-same EPC. Behavioral adaptations are selected by class code, manufacturer, and
-optionally product code.
-
-Currently included profiles:
-
-- Panasonic Ene-Farm `FC-70JR13T` (0x027C): F2, F3, F4, F6, F7 sensors and
-  diagnostic raw F9 observation;
-- Panasonic instantaneous water heater (0x0272): bath temperature, bath-auto
-  control via E3, and diagnostic raw F0 observation;
-- Panasonic user-defined floor heater (0x0F70): power with a configurable
-  settling delay and read-only heating level;
-- AIPHONE WP-2MED visitor sensor (0x0008) and display (0x0601): a real-time
-  visitor-call binary sensor driven by the device's multicast INF notifications;
-- Toshiba home air conditioner (0x0130): fan labels, target humidity,
-  Home/Away power-saving presets, and invalid outdoor-temperature suppression.
-
-See the [quirk schema notes](custom_components/echonet_lite/quirks/README.md).
-After editing the definitions, run `python scripts/validate_quirks.py` before
-restarting Home Assistant.
-
 ## Data Updates
 
 The integration uses both polling and event-driven updates:
@@ -231,7 +203,7 @@ The integration uses both polling and event-driven updates:
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=sayurin&repository=hems_echonet_lite&category=integration)
 
-1. Select the button above, or search for **"HEMS ECHONET Lite Custom"** in HACS.
+1. Select the button above, or search for **"HEMS Echonet Lite"** in HACS.
 2. Install the integration.
 3. Restart Home Assistant.
 
@@ -251,7 +223,7 @@ The integration uses both polling and event-driven updates:
 ## Configuration
 
 1. Go to **Settings → Devices & Services → Add Integration**.
-2. Search for **"HEMS ECHONET Lite Custom"**.
+2. Search for **"HEMS Echonet Lite"**.
 3. Select your network interface:
    - **Auto** (`0.0.0.0`): Listen on all interfaces (recommended)
    - **Specific IP**: Bind to a particular network interface
@@ -261,7 +233,7 @@ The integration uses both polling and event-driven updates:
 
 ### Reconfiguration
 
-The network interface can be changed at any time via **Settings → Devices & Services → HEMS ECHONET Lite Custom → Reconfigure**.
+The network interface can be changed at any time via **Settings → Devices & Services → HEMS Echonet Lite → Reconfigure**.
 
 ## Examples
 
@@ -389,7 +361,7 @@ After setting up the integration, no devices appear at all.
 Some ECHONET Lite devices appear, but others do not.
 
 1. Some devices may take longer to respond. Wait a few minutes and check again, as re-discovery runs every hour.
-2. Try reloading the integration from **Settings → Devices & Services → HEMS ECHONET Lite Custom → ⋮ → Reload**.
+2. Try reloading the integration from **Settings → Devices & Services → HEMS Echonet Lite → ⋮ → Reload**.
 3. Verify the device supports ECHONET Lite. Some appliances have ECHONET Lite disabled by default and require enabling via the manufacturer's app or settings.
 
 ### Devices show as unavailable
@@ -409,11 +381,11 @@ The integration automatically creates repair issues in the following situations:
 
 ## Removing the Integration
 
-To remove the integration, go to **Settings → Devices & Services**, select **HEMS ECHONET Lite Custom**, and select **Delete**.
+To remove the integration, go to **Settings → Devices & Services**, select **HEMS Echonet Lite**, and select **Delete**.
 
 ### Removing a single device
 
-Individual devices can be removed from **Settings → Devices & Services → HEMS ECHONET Lite Custom → (device) → Delete**, but only when the device is no longer reachable on the local network (not currently active in the integration).
+Individual devices can be removed from **Settings → Devices & Services → HEMS Echonet Lite → (device) → Delete**, but only when the device is no longer reachable on the local network (not currently active in the integration).
 
 If a device is still being discovered (powered on and responding), removal will be rejected. Power off the device or remove it from your network first, then try again.
 
@@ -421,15 +393,3 @@ If a device is still being discovered (powered on and responding), removal will 
 
 - [ECHONET Consortium](https://echonet.jp/) for the ECHONET Lite specification
 - [pyhems](https://github.com/sayurin/pyhems) library for ECHONET Lite protocol handling
-
-### Validate household device compatibility
-
-Install Home Assistant 2026.11.0 and the manifest's `pyhems==0.9.1` in an
-isolated Python 3.14 environment, then run:
-
-```sh
-python scripts/validate_quirks.py
-python scripts/validate_platforms.py
-```
-
-The checks use captured values and simulated writes; they do not contact devices.

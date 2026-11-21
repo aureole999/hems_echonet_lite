@@ -1,10 +1,8 @@
 """Sensor platform for the HEMS Echonet Lite integration."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, override
+from typing import override
 
 from pyhems import (
     CollectionPage,
@@ -25,7 +23,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import DEGREE, EntityCategory, Platform
+from homeassistant.const import DEGREE, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -41,7 +39,7 @@ from .entity import (
     setup_echonet_lite_device_platform,
 )
 from .prop import DatetimeProp, DurationProp, EnumProp, NumericProp, TemporalProp
-from .quirks import QUIRKS, RawSensorDefinition
+from .quirks.sensor import async_setup_quirk_sensors, quirk_sensor
 from .runtime import EchonetLiteConfigEntry
 
 PARALLEL_UPDATES = 0
@@ -127,12 +125,7 @@ class EchonetLiteSensorEntityDescription(
 
         # Numeric sensor
         native_unit_of_measurement = infer_ha_unit(entity_def)
-        state_class_override = QUIRKS.sensor_state_class(entity_def.id)
-        state_class = (
-            SensorStateClass(state_class_override)
-            if state_class_override is not None
-            else _state_class(entity_def, native_unit_of_measurement)
-        )
+        state_class = _state_class(entity_def, native_unit_of_measurement)
         return cls(
             key=f"{entity_def.epc:02x}_{entity_def.byte_offset}",
             device_class=infer_device_classes(entity_def)[0],
@@ -148,46 +141,6 @@ _DESCRIPTIONS: dict[int, list[EchonetLiteSensorEntityDescription]] = (
 )
 
 
-@dataclass(frozen=True, kw_only=True)
-class EchonetLiteRawSensorEntityDescription(
-    SensorEntityDescription, EchonetLiteEntityDescription
-):
-    """Description for a quirk-provided raw EDT diagnostic sensor."""
-
-    profile_id: str
-    expected_length: int | None = None
-
-    @classmethod
-    def from_quirk(
-        cls, definition: RawSensorDefinition
-    ) -> EchonetLiteRawSensorEntityDescription:
-        """Build a Home Assistant description from a raw quirk definition."""
-        return cls(
-            key=f"raw_{definition.profile_id}_{definition.epc:02x}",
-            translation_key=definition.id,
-            epc=definition.epc,
-            entity_category=EntityCategory.DIAGNOSTIC,
-            profile_id=definition.profile_id,
-            expected_length=definition.expected_length,
-        )
-
-    @override
-    def should_create(self, node: NodeState) -> bool:
-        """Create only for a matching profile that advertises the EPC."""
-        return self.epc in node.get_epcs and QUIRKS.profile_matches(
-            self.profile_id, node
-        )
-
-
-_RAW_DESCRIPTIONS: dict[int, list[EchonetLiteRawSensorEntityDescription]] = {
-    class_code: [
-        EchonetLiteRawSensorEntityDescription.from_quirk(definition)
-        for definition in definitions
-    ]
-    for class_code, definitions in QUIRKS.raw_sensors.items()
-}
-
-
 async def async_setup_entry(
     _hass: HomeAssistant,
     entry: EchonetLiteConfigEntry,
@@ -199,15 +152,9 @@ async def async_setup_entry(
         async_add_entities,
         Platform.SENSOR.value,
         _DESCRIPTIONS,
-        EchonetLiteSensor,
+        quirk_sensor(EchonetLiteSensor),
     )
-    setup_common_platform(
-        entry,
-        async_add_entities,
-        Platform.SENSOR.value,
-        _RAW_DESCRIPTIONS,
-        EchonetLiteRawSensor,
-    )
+    async_setup_quirk_sensors(entry, async_add_entities)
     setup_echonet_lite_device_platform(
         entry,
         async_add_entities,
@@ -232,37 +179,7 @@ class EchonetLiteSensor(
     @override
     def native_value(self) -> float | int | str | date | datetime | None:
         """Return the state of the sensor."""
-        if QUIRKS.should_suppress_value(self._node, self.description.epc):
-            return None
         return self.description.prop.get(self._node)
-
-
-class EchonetLiteRawSensor(
-    EchonetLiteDescribedEntity[EchonetLiteRawSensorEntityDescription], SensorEntity
-):
-    """Diagnostic sensor exposing an unknown property as hexadecimal EDT."""
-
-    @property
-    @override
-    def native_value(self) -> str | None:
-        """Return the complete EDT as uppercase hexadecimal text."""
-        edt = self._node.properties.get(self.description.epc)
-        return None if edt is None else f"0x{edt.hex().upper()}"
-
-    @property
-    @override
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Expose byte length and unsigned interpretation for observation."""
-        attributes: dict[str, Any] = dict(super().extra_state_attributes or {})
-        edt = self._node.properties.get(self.description.epc)
-        if edt is None:
-            return attributes
-        attributes["raw_length"] = len(edt)
-        attributes["raw_unsigned"] = int.from_bytes(edt, "big") if edt else 0
-        if self.description.expected_length is not None:
-            attributes["expected_length"] = self.description.expected_length
-            attributes["length_matches"] = len(edt) == self.description.expected_length
-        return attributes
 
 
 # ============================================================================

@@ -364,11 +364,10 @@ class EchonetLiteDescribedEntity[DescriptionT: EchonetLiteEntityDescription](
         # Coefficient EPCs (e.g. EPC 0xC2) are never exposed as their own
         # entity, so this entity must subscribe to them directly or they
         # would never actually be polled; see coefficient_epcs' docstring.
-        self._subscribed_epcs = (
-            frozenset({description.epc})
-            | frozenset(description.coefficient_epcs)
-            | QUIRKS.dependencies_for(node, description.epc)
+        self._subscribed_epcs = frozenset({description.epc}) | frozenset(
+            description.coefficient_epcs
         )
+        self._subscribed_epcs |= QUIRKS.dependencies_for(node, description.epc)
 
     @callback
     def _async_listen_timezone_updates(self) -> None:

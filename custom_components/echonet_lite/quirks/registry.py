@@ -32,9 +32,6 @@ _ACCESS_VALUES: Final = frozenset(
 _NUMERIC_FORMATS: Final = frozenset(
     {"uint8", "int8", "uint16", "int16", "uint32", "int32"}
 )
-_STATE_CLASSES: Final = frozenset(
-    {"measurement", "measurement_angle", "total", "total_increasing"}
-)
 
 
 def _code(value: int | str, *, maximum: int, field: str) -> int:
@@ -80,7 +77,6 @@ class QuirkEntityMetadata:
     """Integration-only metadata attached to a local entity definition."""
 
     profile_id: str
-    state_class: str | None = None
     settle_seconds: float = 0.0
     replace_upstream: bool = False
 
@@ -319,15 +315,13 @@ class QuirkRegistry:
 
             definition = cls._parse_entity_definition(raw_entity, match)
             entity_defs.append(definition)
-            state_class = raw_entity.get("state_class")
-            if state_class is not None and state_class not in _STATE_CLASSES:
-                raise ValueError(f"Unsupported state_class {state_class!r}")
+            if "state_class" in raw_entity:
+                raise ValueError("state_class is derived from value_kind")
             settle_seconds = float(raw_entity.get("settle_seconds", 0.0))
             if settle_seconds < 0:
                 raise ValueError("settle_seconds cannot be negative")
             metadata[entity_id] = QuirkEntityMetadata(
                 profile_id=profile_id,
-                state_class=state_class,
                 settle_seconds=settle_seconds,
                 replace_upstream=replace_upstream,
             )
@@ -542,11 +536,6 @@ class QuirkRegistry:
             profile.match.matches(node) and epc in profile.claimed_epcs
             for profile in self.profiles
         )
-
-    def sensor_state_class(self, entity_id: str) -> str | None:
-        """Return an explicit HA state-class override for a local entity."""
-        metadata = self._entity_metadata.get(entity_id)
-        return None if metadata is None else metadata.state_class
 
     def local_entity_definition(
         self, profile_id: str, epc: int

@@ -17,6 +17,14 @@ from custom_components.echonet_lite import (
     climate,
     water_heater,
 )
+from custom_components.echonet_lite.quirks import sensor as quirk_sensors
+from custom_components.echonet_lite.quirks import water_heater as quirk_water_heaters
+from custom_components.echonet_lite.quirks.climate import quirk_climate
+from custom_components.echonet_lite.quirks.sensor import quirk_sensor
+
+Climate = quirk_climate(climate.EchonetLiteClimate)
+Sensor = quirk_sensor(sensor.EchonetLiteSensor)
+assert Climate is quirk_climate(climate.EchonetLiteClimate)  # cached subclass
 
 for name in (
     "binary_sensor",
@@ -92,15 +100,16 @@ d = description(sensor, p, "quirk_panasonic_enefarm_f2")
 assert d.device_class.value == "water" and d.state_class.value == "total_increasing"
 assert d.prop.get(p) == 1
 d = description(sensor, p, "quirk_panasonic_enefarm_f6")
+assert d.device_class.value == "energy" and d.native_unit_of_measurement == "MJ"
 assert (
-    d.state_class.value == "total_increasing" and abs(d.prop.get(p) - 20224.21) < 1e-9
+    d.state_class.value == "total_increasing" and abs(d.prop.get(p) - 2022.421) < 1e-9
 )
 print("Ene-Farm: local sensor catalog, units and counters pass")
 
 # The aggregate water heater suppresses the replaced generic temperature sensor.
 n = node(0x0272, 0x00000B, properties={0xE1: b"\x26", 0xE3: b"\x41"}, writable={0xE3})
 c = coordinator()
-h = water_heater._build_quirk_water_heaters(c, n)[0]
+h = quirk_water_heaters.build_quirk_water_heaters(c, n)[0]
 assert h.current_operation == "bath_auto" and h.native_target_temperature == 38
 assert not any(
     d.should_create(n)
@@ -126,7 +135,7 @@ n = node(
     writable={0xA0, 0xB4, 0x8F},
 )
 c = coordinator()
-a = climate.EchonetLiteClimate(c, n, climate._DESCRIPTIONS[0x0130])
+a = Climate(c, n, climate._DESCRIPTIONS[0x0130])
 assert a.translation_key == "toshiba_climate"
 assert a.fan_modes == ["auto", "low", "middle", "medium", "high", "powerful"]
 assert a.target_humidity == 50 and a.fan_mode == "low"
@@ -138,7 +147,7 @@ n_unmapped = node(
     properties={0x80: b"\x30", 0xA0: b"\x31", 0xB0: b"\x42"},
     writable={0xA0},
 )
-a_unmapped = climate.EchonetLiteClimate(c, n_unmapped, climate._DESCRIPTIONS[0x0130])
+a_unmapped = Climate(c, n_unmapped, climate._DESCRIPTIONS[0x0130])
 assert a_unmapped.fan_mode is None
 for invalid_mode in ("level_1", "silent"):
     try:
@@ -147,7 +156,7 @@ for invalid_mode in ("level_1", "silent"):
         pass
     else:
         raise AssertionError(f"Expected ServiceValidationError for {invalid_mode!r}")
-a_generic = climate.EchonetLiteClimate(
+a_generic = Climate(
     c,
     node(0x0130, 0x000000, properties={0x80: b"\x30", 0xA0: b"\x31"}, writable={0xA0}),
     climate._DESCRIPTIONS[0x0130],
@@ -161,18 +170,20 @@ print("Toshiba: fan labels, humidity, presets and write API pass")
 
 # Sensor entities must read description.epc for suppression and raw EDT attributes.
 n_off = node(0x0130, 0x000069, properties={0x80: b"\x31", 0xB0: b"\x42", 0xBE: b"\x14"})
-n_cool = node(0x0130, 0x000069, properties={0x80: b"\x30", 0xB0: b"\x42", 0xBE: b"\x14"})
+n_cool = node(
+    0x0130, 0x000069, properties={0x80: b"\x30", 0xB0: b"\x42", 0xBE: b"\x14"}
+)
 be_desc = description(sensor, n_cool, "class_0130_epc_be")
-assert sensor.EchonetLiteSensor(c, n_off, be_desc).native_value is None
-assert sensor.EchonetLiteSensor(c, n_cool, be_desc).native_value == 20
-n_raw = node(0x027C, 0x00000B, "FC-70JR13T", {0xF9: b"\x2A"})
+assert Sensor(c, n_off, be_desc).native_value is None
+assert Sensor(c, n_cool, be_desc).native_value == 20
+n_raw = node(0x027C, 0x00000B, "FC-70JR13T", {0xF9: b"\x2a"})
 raw_desc = next(
     desc
-    for desc in sensor._RAW_DESCRIPTIONS[0x027C]
+    for desc in quirk_sensors._RAW_DESCRIPTIONS[0x027C]
     if desc.translation_key == "quirk_panasonic_enefarm_f9_raw"
     and desc.should_create(n_raw)
 )
-raw_entity = sensor.EchonetLiteRawSensor(c, n_raw, raw_desc)
+raw_entity = quirk_sensors.EchonetLiteRawSensor(c, n_raw, raw_desc)
 assert raw_entity.native_value == "0x2A"
 assert raw_entity.extra_state_attributes == {
     "raw_length": 1,
@@ -181,9 +192,35 @@ assert raw_entity.extra_state_attributes == {
     "length_matches": True,
 }
 n_raw_missing = node(0x027C, 0x00000B, "FC-70JR13T", {})
-raw_missing = sensor.EchonetLiteRawSensor(c, n_raw_missing, raw_desc)
+raw_missing = quirk_sensors.EchonetLiteRawSensor(c, n_raw_missing, raw_desc)
 assert raw_missing.native_value is None and raw_missing.extra_state_attributes == {}
 print("Sensors: suppression and raw diagnostic attributes pass")
+
+# Floor-heater switches hold the requested state while the device settles.
+from unittest.mock import patch
+
+from custom_components.echonet_lite import switch
+from custom_components.echonet_lite.quirks.switch import quirk_switch
+
+n = node(0x0F70, 0x00000B, properties={0x80: b"\x31"}, writable={0x80})
+sw = quirk_switch(switch.EchonetLiteSwitch)(
+    c, n, description(switch, n, "quirk_panasonic_floor_power")
+)
+sw.async_write_ha_state = lambda: None
+assert sw._settle_seconds == 20 and sw.is_on is False
+with patch(
+    "custom_components.echonet_lite.quirks.switch.async_call_later",
+    return_value=lambda: None,
+) as call_later:
+    asyncio.run(sw.async_turn_on())
+assert call_later.call_args.args[1] == 20 and sw.is_on is True
+assert c.device_manager.set_properties.call_args.kwargs["properties"][0].edt == b"\x30"
+sw._clear_pending_state(None)
+assert sw.is_on is False
+print("Floor heater: optimistic settle window pass")
+from importlib.metadata import version
+
 print(
-    "All integration platforms imported under Home Assistant 2026.11.0 and pyhems 0.9.1"
+    "All integration platforms imported under Home Assistant "
+    f"{version('homeassistant')} and pyhems {version('pyhems')}"
 )

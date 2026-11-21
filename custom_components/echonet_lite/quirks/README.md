@@ -38,7 +38,10 @@ Example:
       "get": "optional",
       "set": "notApplicable",
       "name_en": "Cumulative total",
-      "name_ja": "積算値"
+      "name_ja": "積算値",
+      "name_zh": "累计值",
+      "quantity": "water_volume",
+      "value_kind": "cumulative"
     }
   ]
 }
@@ -47,7 +50,8 @@ Example:
 `class_code`, `manufacturer_code`, EPCs, and enum EDT values accept integers
 or `0x`-prefixed strings. Numeric formats are `uint8`, `int8`, `uint16`,
 `int16`, `uint32`, and `int32`; `scale` is applied after decoding. Enum values
-declare their raw byte, stable key, and English/Japanese label. Set
+declare their raw byte, stable key, and English/Japanese/Chinese label
+(`name_en`, `name_ja`, `name_zh`). Set
 `settle_seconds` on a writable binary enum when the appliance reports the old
 state for a while after accepting a command.
 
@@ -65,12 +69,37 @@ Behavior entries currently support:
 - a water-heater aggregate backed by configurable operation and temperature
   EPCs.
 
-Every entity/device key added to this file must also exist in `strings.json`,
-`translations/en.json`, and `translations/ja.json`. Run
-`python scripts/validate_quirks.py` to validate the schema, translation keys,
-matching rules, and captured device decode fixtures.
+## Names and translations
 
-With pyhems 0.9.1, numeric definitions can declare `quantity` (for example
-`water_volume` or `temperature`) and `value_kind` (`measurement`, `total`,
-`cumulative`). These preserve Home Assistant device classes and statistics
-without inferring semantics from the display name.
+Names are written once, here, with `name_en`, `name_ja` and `name_zh`
+fields: on entities and enum values, `device_name_*` next to
+`device_translation_key`, on each climate `fan_mode_labels` item, and
+`name_*`/`operation_on_name_*`/`operation_off_name_*` on the water-heater
+behavior. Other fork strings (Chinese names for upstream entities, config
+titles) live in `quirks/translations/<lang>.json` in Home Assistant's
+translation layout.
+
+Upstream's `strings.json` and `translations/*.json` are never edited in the
+repository. `scripts/fork_build.py` merges the fork strings into a copy when
+building the release archive. To try a local checkout in Home Assistant, run
+`python scripts/quirk_translations.py --write` first and do not commit the
+result.
+
+## Platform behavior
+
+Quirk behavior lives in this package (`climate.py`, `switch.py`, `sensor.py`,
+`water_heater.py`). Upstream platform modules only wrap their entity class,
+for example `quirk_climate(EchonetLiteClimate)`, or call one
+`async_setup_quirk_*` function, so merges from upstream touch a few lines.
+
+## Validation
+
+Run `python scripts/validate_quirks.py` to validate the schema, generated
+translation keys, matching rules and captured device decode fixtures, and
+`python scripts/validate_platforms.py` (needs Home Assistant installed) for
+the platform behavior.
+
+Numeric definitions declare `quantity` (for example `water_volume`, `energy`
+or `temperature`) and `value_kind` (`measurement`, `total`, `cumulative`).
+These set Home Assistant device classes and state classes; there is no
+separate `state_class` field.

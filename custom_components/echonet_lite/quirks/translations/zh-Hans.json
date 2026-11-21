@@ -1,0 +1,328 @@
+{
+  "device": {
+    "class_0130": {
+      "name": "家用空调"
+    },
+    "class_0272": {
+      "name": "热水器"
+    },
+    "class_027c": {
+      "name": "燃料电池"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "class_0000_epc_88": {
+        "name": "故障状态",
+        "state": {
+          "off": "无故障",
+          "on": "有故障"
+        }
+      },
+      "class_0272_epc_d0": {
+        "name": "热水加热状态",
+        "state": {
+          "off": "未加热",
+          "on": "加热中"
+        }
+      },
+      "class_0272_epc_e2": {
+        "name": "浴缸加热状态",
+        "state": {
+          "off": "未加热",
+          "on": "加热中"
+        }
+      },
+      "class_0272_epc_e9": {
+        "name": "浴室优先设置",
+        "state": {
+          "off": "浴室优先关",
+          "on": "浴室优先开"
+        }
+      },
+      "class_0272_epc_ea": {
+        "name": "淋浴供热水状态",
+        "state": {
+          "off": "未供热水",
+          "on": "供热水中"
+        }
+      },
+      "class_0272_epc_eb": {
+        "name": "厨房供热水状态",
+        "state": {
+          "off": "未供热水",
+          "on": "供热水中"
+        }
+      }
+    },
+    "button": {
+      "class_027c_epc_c6": {
+        "name": "重置累计发电量"
+      },
+      "class_027c_epc_c9": {
+        "name": "重置累计燃气用量"
+      },
+      "class_027c_epc_ce": {
+        "name": "重置家庭累计用电量"
+      }
+    },
+    "number": {
+      "class_0272_epc_92": {
+        "name": "浴缸自动定时（相对时间）"
+      },
+      "class_0272_epc_d1": {
+        "name": "热水温度设置"
+      },
+      "class_0272_epc_d4": {
+        "name": "浴缸水量设置 4"
+      },
+      "class_0272_epc_d6": {
+        "name": "音量设置"
+      },
+      "class_0272_epc_e1": {
+        "name": "浴缸温度设置"
+      },
+      "class_0272_epc_e7": {
+        "name": "浴缸水量设置 1"
+      },
+      "class_0272_epc_ee": {
+        "name": "浴缸水量设置 3"
+      }
+    },
+    "select": {
+      "class_0272_epc_e8": {
+        "name": "浴缸水量设置 2",
+        "state": {
+          "level_1": "1 档",
+          "level_2": "2 档",
+          "level_3": "3 档",
+          "level_4": "4 档",
+          "level_5": "5 档",
+          "level_6": "6 档",
+          "level_7": "7 档",
+          "level_8": "8 档"
+        }
+      },
+      "class_027c_epc_d2": {
+        "name": "指定发电模式",
+        "state": {
+          "load_following": "跟随负荷发电",
+          "maximum_rating": "按额定最大功率发电"
+        }
+      },
+      "installation_location_code": {
+        "name": "安装位置",
+        "state": {
+          "balcony": "阳台",
+          "bathroom": "浴室",
+          "dining_room": "餐厅",
+          "front_door": "玄关",
+          "garage": "车库",
+          "garden": "庭院",
+          "kitchen": "厨房",
+          "lavatory": "卫生间",
+          "living_room": "客厅",
+          "others": "其他",
+          "passageway": "走廊",
+          "room": "房间",
+          "stairway": "楼梯",
+          "storeroom": "储藏室",
+          "unset": "未设置",
+          "washroom": "盥洗室"
+        }
+      },
+      "installation_location_number": {
+        "name": "安装位置编号",
+        "state": {
+          "0": "未设置",
+          "1": "1",
+          "2": "2",
+          "3": "3",
+          "4": "4",
+          "5": "5",
+          "6": "6",
+          "7": "7"
+        }
+      }
+    },
+    "sensor": {
+      "class_0000_epc_89": {
+        "name": "故障内容",
+        "state": {
+          "changing_battery": "更换电池",
+          "cleaning": "清洁（滤网等）",
+          "fault": "有故障",
+          "no_fault": "无故障",
+          "recover_operation_no_required": "无需恢复操作",
+          "repair_location_unkown": "维修部位不明",
+          "reset_button": "按复位按钮后重新操作",
+          "set_incorrectly": "安装不当",
+          "supply": "需要补充",
+          "trun_off_or_unplug": "关闭电源或拔下插头后重新操作",
+          "user_definable1": "用户自定义区域 1"
+        }
+      },
+      "class_0130_epc_ba": {
+        "name": "室内湿度"
+      },
+      "class_0130_epc_bb": {
+        "name": "室内温度"
+      },
+      "class_0130_epc_be": {
+        "name": "室外温度"
+      },
+      "class_0272_epc_d5": {
+        "name": "浴缸水量设置 4 最大可设档位"
+      },
+      "class_0272_epc_db": {
+        "name": "自动运行剩余时间"
+      },
+      "class_0272_epc_ef": {
+        "name": "浴缸运行状态",
+        "state": {
+          "keeping_temperature": "保温中",
+          "no_operation": "停止",
+          "running_hot_water": "注水中"
+        }
+      },
+      "class_027c_epc_c1": {
+        "name": "热水器水温"
+      },
+      "class_027c_epc_c2": {
+        "name": "额定发电功率"
+      },
+      "class_027c_epc_c3": {
+        "name": "储水箱热量"
+      },
+      "class_027c_epc_c4": {
+        "name": "瞬时发电功率"
+      },
+      "class_027c_epc_c5": {
+        "name": "累计发电量"
+      },
+      "class_027c_epc_c7": {
+        "name": "瞬时燃气用量"
+      },
+      "class_027c_epc_c8": {
+        "name": "累计燃气用量"
+      },
+      "class_027c_epc_cb": {
+        "name": "发电状态",
+        "state": {
+          "generating": "发电中",
+          "idling": "待机中",
+          "starting": "启动中",
+          "stopped": "已停止",
+          "stopping": "正在停止"
+        }
+      },
+      "class_027c_epc_cc": {
+        "name": "家庭瞬时用电功率"
+      },
+      "class_027c_epc_cd": {
+        "name": "家庭累计用电量"
+      },
+      "class_027c_epc_d0": {
+        "name": "并网方式",
+        "state": {
+          "independent": "独立运行",
+          "reverse_power_flow_acceptable": "并网（允许逆潮流）",
+          "reverse_power_flow_not_acceptable": "并网（不允许逆潮流）"
+        }
+      },
+      "class_027c_epc_e1": {
+        "name": "剩余热水量"
+      },
+      "class_027c_epc_e2": {
+        "name": "储水箱容量"
+      }
+    },
+    "switch": {
+      "class_0000_epc_80": {
+        "name": "运行状态",
+        "state": {
+          "off": "关",
+          "on": "开"
+        }
+      },
+      "class_0130_epc_cf": {
+        "name": "空气净化模式",
+        "state": {
+          "off": "空气净化关",
+          "on": "空气净化开"
+        }
+      },
+      "class_0272_epc_90": {
+        "name": "浴缸自动定时预约",
+        "state": {
+          "off": "未预约",
+          "on": "已预约"
+        }
+      },
+      "class_0272_epc_d2": {
+        "name": "热水保温设置",
+        "state": {
+          "off": "保温解除",
+          "on": "保温中"
+        }
+      },
+      "class_0272_epc_d7": {
+        "name": "静音设置",
+        "state": {
+          "off": "静音关",
+          "on": "静音开"
+        }
+      },
+      "class_0272_epc_e3": {
+        "name": "浴缸自动模式",
+        "state": {
+          "off": "自动关",
+          "on": "自动开"
+        }
+      },
+      "class_0272_epc_e4": {
+        "name": "浴缸追加加热",
+        "state": {
+          "off": "追加加热关",
+          "on": "追加加热开"
+        }
+      },
+      "class_0272_epc_e5": {
+        "name": "浴缸补热水",
+        "state": {
+          "off": "补热水关",
+          "on": "补热水开"
+        }
+      },
+      "class_0272_epc_e6": {
+        "name": "浴缸降低水温",
+        "state": {
+          "off": "降温关",
+          "on": "降温开"
+        }
+      },
+      "class_0272_epc_ec": {
+        "name": "热水保温定时预约",
+        "state": {
+          "off": "未预约",
+          "on": "已预约"
+        }
+      },
+      "class_027c_epc_ca": {
+        "name": "发电设置",
+        "state": {
+          "off": "停止发电",
+          "on": "发电"
+        }
+      }
+    },
+    "time": {
+      "class_0272_epc_91": {
+        "name": "定时开启时间"
+      },
+      "class_0272_epc_ed": {
+        "name": "热水保温定时时间"
+      }
+    }
+  }
+}
