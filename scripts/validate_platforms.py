@@ -97,7 +97,7 @@ p = node(
     0x027C, 0x00000B, "FC-70JR13T", {0xF2: b"\x00\x01", 0xF6: bytes.fromhex("001edc15")}
 )
 d = description(sensor, p, "quirk_panasonic_enefarm_f2")
-assert d.device_class.value == "water" and d.state_class.value == "total_increasing"
+assert d.device_class.value == "water" and d.state_class.value == "total"
 assert d.prop.get(p) == 1
 d = description(sensor, p, "quirk_panasonic_enefarm_f6")
 assert d.device_class.value == "energy" and d.native_unit_of_measurement == "MJ"
@@ -105,6 +105,34 @@ assert (
     d.state_class.value == "total_increasing" and abs(d.prop.get(p) - 2022.421) < 1e-9
 )
 print("Ene-Farm: local sensor catalog, units and counters pass")
+
+# Daily counters start a new last_reset cycle only on a drop after midnight.
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from homeassistant.util import dt as dt_util
+
+dt_util.set_default_time_zone(ZoneInfo("Asia/Tokyo"))
+Sensor = quirk_sensor(sensor.EchonetLiteSensor)
+s = Sensor(coordinator(), p, description(sensor, p, "quirk_panasonic_enefarm_f2"))
+assert s._daily_reset
+tz = ZoneInfo("Asia/Tokyo")
+day = datetime(2026, 11, 21, tzinfo=tz)
+s._advance_cycle(4, day + timedelta(hours=10))
+assert s._cycle_start == day
+s._advance_cycle(3, day + timedelta(hours=10, minutes=4))  # transient dip
+assert s._cycle_start == day
+s._advance_cycle(87, day + timedelta(hours=23, minutes=50))
+s._advance_cycle(87, day + timedelta(days=1, minutes=1))  # not cleared yet
+assert s._cycle_start == day
+s._advance_cycle(0, day + timedelta(days=1, minutes=2))
+assert s._cycle_start == day + timedelta(days=1)
+s._advance_cycle(5, day + timedelta(days=1, hours=1))
+s._advance_cycle(0, day + timedelta(days=1, hours=23, minutes=55))  # early clear
+assert s._cycle_start == day + timedelta(days=2)
+f6 = Sensor(coordinator(), p, description(sensor, p, "quirk_panasonic_enefarm_f6"))
+assert not f6._daily_reset
+print("Ene-Farm: daily counter last_reset cycles pass")
 
 # The aggregate water heater suppresses the replaced generic temperature sensor.
 n = node(0x0272, 0x00000B, properties={0xE1: b"\x26", 0xE3: b"\x41"}, writable={0xE3})

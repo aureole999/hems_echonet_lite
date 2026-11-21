@@ -79,6 +79,7 @@ class QuirkEntityMetadata:
     profile_id: str
     settle_seconds: float = 0.0
     replace_upstream: bool = False
+    daily_reset: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -320,10 +321,14 @@ class QuirkRegistry:
             settle_seconds = float(raw_entity.get("settle_seconds", 0.0))
             if settle_seconds < 0:
                 raise ValueError("settle_seconds cannot be negative")
+            daily_reset = bool(raw_entity.get("daily_reset", False))
+            if daily_reset and raw_entity.get("value_kind") != "total":
+                raise ValueError("daily_reset requires value_kind 'total'")
             metadata[entity_id] = QuirkEntityMetadata(
                 profile_id=profile_id,
                 settle_seconds=settle_seconds,
                 replace_upstream=replace_upstream,
+                daily_reset=daily_reset,
             )
             if replace_upstream:
                 replacement_epcs.add(epc)
@@ -552,11 +557,13 @@ class QuirkRegistry:
             None,
         )
 
-    def settle_seconds(self, node: NodeState, entity_id: str, epc: int) -> float:
-        """Return optimistic state hold time for a matching local switch."""
+    def entity_metadata(
+        self, node: NodeState, entity_id: str, epc: int
+    ) -> QuirkEntityMetadata | None:
+        """Return metadata for a local entity that applies to ``node``."""
         metadata = self._entity_metadata.get(entity_id)
         if metadata is None or not self.profile_matches(metadata.profile_id, node):
-            return 0.0
+            return None
         definition = next(
             (
                 entity
@@ -567,7 +574,17 @@ class QuirkRegistry:
             ),
             None,
         )
-        return metadata.settle_seconds if definition is not None else 0.0
+        return metadata if definition is not None else None
+
+    def settle_seconds(self, node: NodeState, entity_id: str, epc: int) -> float:
+        """Return optimistic state hold time for a matching local switch."""
+        metadata = self.entity_metadata(node, entity_id, epc)
+        return metadata.settle_seconds if metadata is not None else 0.0
+
+    def daily_reset(self, node: NodeState, entity_id: str, epc: int) -> bool:
+        """Return whether a local counter restarts from zero every day."""
+        metadata = self.entity_metadata(node, entity_id, epc)
+        return metadata is not None and metadata.daily_reset
 
     def dependencies_for(self, node: NodeState, epc: int) -> frozenset[int]:
         """Return extra EPCs needed to evaluate the state of ``epc``."""

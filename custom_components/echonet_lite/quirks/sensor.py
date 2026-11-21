@@ -1,8 +1,9 @@
-"""Sensor quirks: raw diagnostic sensors and conditional value suppression."""
+"""Sensor quirks: raw diagnostic sensors, value suppression and daily counters."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Any, override
 
 from pyhems import NodeState
@@ -10,6 +11,7 @@ from pyhems import NodeState
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.const import EntityCategory, Platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from ..entity import (
     EchonetLiteDescribedEntity,
@@ -40,8 +42,30 @@ def async_setup_quirk_sensors(
     )
 
 
+# A device may clear its daily counter slightly before Home Assistant's
+# midnight; a drop this close to the next day still starts a new cycle.
+DAILY_RESET_EARLY = timedelta(minutes=10)
+
+
 class SuppressibleSensorMixin:
-    """Report no value while a profile's raw-value condition is true."""
+    """Quirk behavior for numeric sensors.
+
+    - ``native_value`` is None while a profile's raw-value condition is true.
+    - ``daily_reset`` counters report ``last_reset``: a new cycle starts only
+      when the value falls to half or less after local midnight, so a
+      transient lower reading is not mistaken for a meter reset.
+    """
+
+    _daily_reset: bool = False
+    _cycle_start: datetime | None = None
+    _cycle_value: float | None = None
+
+    def __init__(self, coordinator: Any, node: Any, description: Any) -> None:
+        """Initialize the upstream entity and read the daily-reset flag."""
+        super().__init__(coordinator, node, description)  # type: ignore[call-arg]
+        self._daily_reset = QUIRKS.daily_reset(
+            node, description.translation_key or "", description.epc
+        )
 
     @property
     def native_value(self) -> Any:
@@ -50,6 +74,28 @@ class SuppressibleSensorMixin:
         if QUIRKS.should_suppress_value(self_._node, self_.description.epc):
             return None
         return super().native_value  # type: ignore[misc]
+
+    @property
+    def last_reset(self) -> datetime | None:
+        """Return the start of the current daily counting cycle."""
+        if not self._daily_reset:
+            return super().last_reset  # type: ignore[misc]
+        value = self.native_value
+        if isinstance(value, (int, float)):
+            self._advance_cycle(float(value), dt_util.now())
+        return self._cycle_start
+
+    def _advance_cycle(self, value: float, now: datetime) -> None:
+        day_start = dt_util.start_of_local_day(now + DAILY_RESET_EARLY)
+        if self._cycle_start is None:
+            self._cycle_start = dt_util.start_of_local_day(now)
+        elif (
+            self._cycle_value is not None
+            and value <= self._cycle_value / 2
+            and day_start > self._cycle_start
+        ):
+            self._cycle_start = day_start
+        self._cycle_value = value
 
 
 @dataclass(frozen=True, kw_only=True)

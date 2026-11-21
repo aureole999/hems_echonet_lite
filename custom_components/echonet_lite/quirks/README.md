@@ -103,3 +103,11 @@ Numeric definitions declare `quantity` (for example `water_volume`, `energy`
 or `temperature`) and `value_kind` (`measurement`, `total`, `cumulative`).
 These set Home Assistant device classes and state classes; there is no
 separate `state_class` field.
+
+Counters that the device clears every day (for example ENE-FARM's "today"
+hot-water volumes) use `"value_kind": "total"` with `"daily_reset": true`.
+The sensor then reports `last_reset`, and a new cycle starts only when the
+value falls to half or less after local midnight. Unlike `cumulative`
+(`total_increasing`), a brief lower reading during the day is recorded as a
+small negative change instead of a meter reset that counts the whole value
+again.

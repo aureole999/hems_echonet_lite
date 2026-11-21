@@ -27,7 +27,8 @@
           "name_ja": "本日の燃料電池お湯使用量",
           "name_zh": "今日燃料电池热水用量",
           "quantity": "water_volume",
-          "value_kind": "cumulative"
+          "value_kind": "total",
+          "daily_reset": true
         },
         {
           "id": "quirk_panasonic_enefarm_f3",
@@ -44,7 +45,8 @@
           "name_ja": "本日の補助熱源お湯使用量",
           "name_zh": "今日辅助热源热水用量",
           "quantity": "water_volume",
-          "value_kind": "cumulative"
+          "value_kind": "total",
+          "daily_reset": true
         },
         {
           "id": "quirk_panasonic_enefarm_f4",
