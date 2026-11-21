@@ -154,6 +154,33 @@ class QuirkProfile:
     suppression_rules: tuple[ValueSuppressionRule, ...]
     climate: ClimateQuirk | None
     water_heater: WaterHeaterQuirk | None
+    fast_poll_epcs: frozenset[int] = frozenset()
+
+
+class FastPollSelection(dict[int, frozenset[int]]):
+    """Upstream per-class fast-poll EPCs plus vendor EPCs from local profiles.
+
+    It stays a plain mapping for code that reads it per class, and is also a
+    pyhems ``EpcSelection`` callable that adds the EPCs local profiles mark
+    with ``"fast_poll": true`` for the matching manufacturer.
+    """
+
+    def __init__(
+        self,
+        base: Mapping[int, frozenset[int]],
+        vendor: Mapping[tuple[int, int | None], frozenset[int]],
+    ) -> None:
+        """Store the upstream mapping and the local per-vendor additions."""
+        super().__init__(base)
+        self.vendor = MappingProxyType(dict(vendor))
+
+    def __call__(self, class_code: int, manufacturer_code: int) -> frozenset[int]:
+        """Return the fast-poll EPCs for one device class and manufacturer."""
+        return (
+            self.get(class_code, frozenset())
+            | self.vendor.get((class_code, None), frozenset())
+            | self.vendor.get((class_code, manufacturer_code), frozenset())
+        )
 
 
 class QuirkRegistry:
@@ -221,6 +248,14 @@ class QuirkRegistry:
         self.monitored_epcs = MappingProxyType(
             {class_code: frozenset(epcs) for class_code, epcs in monitored.items()}
         )
+        fast: dict[tuple[int, int | None], set[int]] = {}
+        for profile in profiles:
+            if profile.fast_poll_epcs:
+                key = (profile.match.class_code, profile.match.manufacturer_code)
+                fast.setdefault(key, set()).update(profile.fast_poll_epcs)
+        self.fast_poll_epcs = MappingProxyType(
+            {key: frozenset(epcs) for key, epcs in fast.items()}
+        )
         self.verified_class_codes = frozenset(
             profile.match.class_code for profile in profiles if profile.verified
         )
@@ -284,6 +319,7 @@ class QuirkRegistry:
         raw_sensors: list[RawSensorDefinition] = []
         metadata: dict[str, QuirkEntityMetadata] = {}
         replacement_epcs: set[int] = set()
+        fast_poll_epcs: set[int] = set()
         for raw_entity in raw.get("entities", []):
             entity_id = str(raw_entity["id"])
             if entity_id in metadata or any(
@@ -295,6 +331,8 @@ class QuirkRegistry:
             epc = _code(raw_entity["epc"], maximum=0xFF, field="epc")
             kind = raw_entity["type"]
             replace_upstream = bool(raw_entity.get("replace_upstream", False))
+            if raw_entity.get("fast_poll", False):
+                fast_poll_epcs.add(epc)
             if kind == "raw":
                 expected_length = raw_entity.get("expected_length")
                 if expected_length is not None:
@@ -339,6 +377,10 @@ class QuirkRegistry:
             for value in behaviors.get("claimed_epcs", [])
         }
         claimed_epcs.update(replacement_epcs)
+        fast_poll_epcs.update(
+            _code(value, maximum=0xFF, field="fast_poll_epcs")
+            for value in behaviors.get("fast_poll_epcs", [])
+        )
 
         suppression_rules = tuple(
             cls._parse_suppression_rule(rule)
@@ -371,6 +413,7 @@ class QuirkRegistry:
                 suppression_rules=suppression_rules,
                 climate=climate,
                 water_heater=water_heater,
+                fast_poll_epcs=frozenset(fast_poll_epcs),
             ),
             metadata,
         )
@@ -556,6 +599,12 @@ class QuirkRegistry:
             (entity for entity in profile.entity_definitions if entity.epc == epc),
             None,
         )
+
+    def fast_poll_selection(
+        self, base: Mapping[int, frozenset[int]]
+    ) -> FastPollSelection:
+        """Return ``base`` extended with local fast-poll EPCs per manufacturer."""
+        return FastPollSelection(base, self.fast_poll_epcs)
 
     def entity_metadata(
         self, node: NodeState, entity_id: str, epc: int

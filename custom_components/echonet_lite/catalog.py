@@ -294,4 +294,6 @@ def _build_fast_poll_epcs() -> dict[int, frozenset[int]]:
     return result
 
 
-FAST_POLL_EPCS: Final[dict[int, frozenset[int]]] = _build_fast_poll_epcs()
+FAST_POLL_EPCS: Final[dict[int, frozenset[int]]] = REGISTRY.fast_poll_selection(
+    _build_fast_poll_epcs()
+)  # plus local quirk vendor EPCs

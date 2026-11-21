@@ -106,8 +106,12 @@ separate `state_class` field.
 
 Counters that the device clears every day (for example ENE-FARM's "today"
 hot-water volumes) use `"value_kind": "total"` with `"daily_reset": true`.
-The sensor then reports `last_reset`, and a new cycle starts only when the
-value falls to half or less after local midnight. Unlike `cumulative`
-(`total_increasing`), a brief lower reading during the day is recorded as a
-small negative change instead of a meter reset that counts the whole value
-again.
+The sensor reports the start of the local day as `last_reset`. Unlike
+`cumulative` (`total_increasing`), a brief lower reading during the day is
+recorded as a small negative change instead of a meter reset that counts the
+whole value again.
+
+Vendor EPCs that change quickly can set `"fast_poll": true`. They join the
+integration's 10-second polling tier for devices of the profile's
+manufacturer, in the same request as the class's instantaneous values.
+Upstream EPCs are listed in the profile's `behaviors.fast_poll_epcs`.

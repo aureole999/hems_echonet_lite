@@ -22,6 +22,7 @@
           "maximum": 65533,
           "scale": 1,
           "get": "optional",
+          "fast_poll": true,
           "set": "notApplicable",
           "name_en": "Fuel cell hot water use today",
           "name_ja": "本日の燃料電池お湯使用量",
@@ -40,6 +41,7 @@
           "maximum": 65533,
           "scale": 1,
           "get": "optional",
+          "fast_poll": true,
           "set": "notApplicable",
           "name_en": "Backup heater hot water use today",
           "name_ja": "本日の補助熱源お湯使用量",
@@ -56,6 +58,7 @@
           "minimum": 0,
           "maximum": 253,
           "get": "optional",
+          "fast_poll": true,
           "set": "notApplicable",
           "name_en": "Hot water level in tank",
           "name_ja": "タンク残湯レベル",
@@ -72,6 +75,7 @@
           "maximum": 4294967293,
           "scale": 0.001,
           "get": "optional",
+          "fast_poll": true,
           "set": "notApplicable",
           "name_en": "Fuel cell exhaust heat recovery",
           "name_ja": "燃料電池排熱回収量",
@@ -89,6 +93,7 @@
           "maximum": 4294967293,
           "scale": 0.001,
           "get": "optional",
+          "fast_poll": true,
           "set": "notApplicable",
           "name_en": "Backup heater gas consumption",
           "name_ja": "補助熱源ガス使用量",
@@ -97,15 +102,40 @@
           "value_kind": "cumulative"
         },
         {
-          "id": "quirk_panasonic_enefarm_f9_raw",
+          "id": "quirk_panasonic_enefarm_f9",
           "epc": "0xF9",
-          "type": "raw",
-          "expected_length": 1,
-          "name_en": "Unknown property F9",
-          "name_ja": "未解析プロパティ F9",
-          "name_zh": "未解析属性 F9"
+          "type": "enum",
+          "get": "optional",
+          "set": "notApplicable",
+          "fast_poll": true,
+          "name_en": "Hot water tank full",
+          "name_ja": "貯湯タンク満タン",
+          "name_zh": "储水箱已满",
+          "values": [
+            {
+              "edt": "0x41",
+              "key": "true",
+              "name_en": "Full",
+              "name_ja": "満タン",
+              "name_zh": "已满"
+            },
+            {
+              "edt": "0x42",
+              "key": "false",
+              "name_en": "Not full",
+              "name_ja": "満タンでない",
+              "name_zh": "未满"
+            }
+          ]
         }
-      ]
+      ],
+      "behaviors": {
+        "fast_poll_epcs": [
+          "0xC5",
+          "0xC8",
+          "0xCD"
+        ]
+      }
     },
     {
       "id": "panasonic_instantaneous_water_heater",

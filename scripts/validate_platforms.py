@@ -106,8 +106,7 @@ assert (
 )
 print("Ene-Farm: local sensor catalog, units and counters pass")
 
-# Daily counters start a new last_reset cycle only on a drop after midnight.
-from datetime import datetime, timedelta
+# Daily counters report local midnight as last_reset; other counters do not.
 from zoneinfo import ZoneInfo
 
 from homeassistant.util import dt as dt_util
@@ -115,24 +114,21 @@ from homeassistant.util import dt as dt_util
 dt_util.set_default_time_zone(ZoneInfo("Asia/Tokyo"))
 Sensor = quirk_sensor(sensor.EchonetLiteSensor)
 s = Sensor(coordinator(), p, description(sensor, p, "quirk_panasonic_enefarm_f2"))
-assert s._daily_reset
-tz = ZoneInfo("Asia/Tokyo")
-day = datetime(2026, 11, 21, tzinfo=tz)
-s._advance_cycle(4, day + timedelta(hours=10))
-assert s._cycle_start == day
-s._advance_cycle(3, day + timedelta(hours=10, minutes=4))  # transient dip
-assert s._cycle_start == day
-s._advance_cycle(87, day + timedelta(hours=23, minutes=50))
-s._advance_cycle(87, day + timedelta(days=1, minutes=1))  # not cleared yet
-assert s._cycle_start == day
-s._advance_cycle(0, day + timedelta(days=1, minutes=2))
-assert s._cycle_start == day + timedelta(days=1)
-s._advance_cycle(5, day + timedelta(days=1, hours=1))
-s._advance_cycle(0, day + timedelta(days=1, hours=23, minutes=55))  # early clear
-assert s._cycle_start == day + timedelta(days=2)
+assert s._daily_reset and s.last_reset == dt_util.start_of_local_day()
 f6 = Sensor(coordinator(), p, description(sensor, p, "quirk_panasonic_enefarm_f6"))
-assert not f6._daily_reset
-print("Ene-Farm: daily counter last_reset cycles pass")
+assert not f6._daily_reset and f6.last_reset is None
+print("Ene-Farm: daily counter last_reset pass")
+
+# F9 is the tank-full flag; Panasonic vendor EPCs join the fast polling tier.
+f = node(0x027C, 0x00000B, "FC-70JR13T", {0xF9: b"\x41"})
+d = description(binary_sensor, f, "quirk_panasonic_enefarm_f9")
+assert d.prop.get(f) is True
+fast = catalog.FAST_POLL_EPCS
+assert {0xF2, 0xF3, 0xF4, 0xF6, 0xF7, 0xF9, 0xC4, 0xC5, 0xC8, 0xCD} <= fast(
+    0x027C, 0x00000B
+)
+assert 0xF2 not in fast(0x027C, 0x000005) and fast[0x027C] == fast(0x027C, 0x000005)
+print("Ene-Farm: tank-full flag and fast polling pass")
 
 # The aggregate water heater suppresses the replaced generic temperature sensor.
 n = node(0x0272, 0x00000B, properties={0xE1: b"\x26", 0xE3: b"\x41"}, writable={0xE3})
@@ -204,11 +200,11 @@ n_cool = node(
 be_desc = description(sensor, n_cool, "class_0130_epc_be")
 assert Sensor(c, n_off, be_desc).native_value is None
 assert Sensor(c, n_cool, be_desc).native_value == 20
-n_raw = node(0x027C, 0x00000B, "FC-70JR13T", {0xF9: b"\x2a"})
+n_raw = node(0x0272, 0x00000B, properties={0xF0: b"\x2a"})
 raw_desc = next(
     desc
-    for desc in quirk_sensors._RAW_DESCRIPTIONS[0x027C]
-    if desc.translation_key == "quirk_panasonic_enefarm_f9_raw"
+    for desc in quirk_sensors._RAW_DESCRIPTIONS[0x0272]
+    if desc.translation_key == "quirk_panasonic_water_heater_f0_raw"
     and desc.should_create(n_raw)
 )
 raw_entity = quirk_sensors.EchonetLiteRawSensor(c, n_raw, raw_desc)
@@ -219,7 +215,7 @@ assert raw_entity.extra_state_attributes == {
     "expected_length": 1,
     "length_matches": True,
 }
-n_raw_missing = node(0x027C, 0x00000B, "FC-70JR13T", {})
+n_raw_missing = node(0x0272, 0x00000B)
 raw_missing = quirk_sensors.EchonetLiteRawSensor(c, n_raw_missing, raw_desc)
 assert raw_missing.native_value is None and raw_missing.extra_state_attributes == {}
 print("Sensors: suppression and raw diagnostic attributes pass")
